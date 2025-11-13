@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: Books.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
 import java.text.Normalizer

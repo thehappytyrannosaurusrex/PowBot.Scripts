@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: Locations.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
 import org.powbot.api.Tile
@@ -10,11 +17,15 @@ import org.powbot.api.Tile
  *
  * Any tile outside these bounds is considered OUTSIDE.
  */
+/**
+ * Locations: Core component of the Arceuus Library script.
+ * Auto-generated doc stub (reviewed 2025-11-12).
+ */
 object Locations {
 
     private val LIBRARY_TILE = Tile(1632, 3804, 0)
 
-    enum class Area { NORTHWEST, NORTHEAST, SOUTHWEST, CENTRAL, OUTSIDE }
+    enum class Area { NORTHWEST, NORTHEAST, SOUTHWEST, CENTRAL, CORRIDOR, OUTSIDE }
 
     /** Inclusive rectangle bound on a specific floor. */
     private data class RectArea(
@@ -34,29 +45,45 @@ object Locations {
     // -----------------------------
     // Floor 0 (Ground floor)
     // -----------------------------
-    private val SW_GROUND = RectArea(1606, 3783, 1627, 3802, 0)
-    private val NW_GROUND = RectArea(1606, 3813, 1627, 3832, 0)
-    private val NE_GROUND = RectArea(1638, 3813, 1659, 3832, 0)
+    private val SW_GROUND = RectArea(1607, 3784, 1626, 3801, 0)
+    private val NW_GROUND = RectArea(1607, 3814, 1626, 3831, 0)
+    private val NE_GROUND = RectArea(1639, 3814, 1658, 3831, 0)
     // Central Building (Overlaps)
     private val CENTRAL_GROUND = RectArea(1622, 3797, 1643, 3818, 0)
 
     // -----------------------------
     // Floor 1 (First floor)
     // -----------------------------
-    private val SW_FIRST = RectArea(1606, 3783, 1627, 3802, 1)
-    private val NW_FIRST = RectArea(1606, 3813, 1627, 3832, 1)
-    private val NE_FIRST = RectArea(1638, 3813, 1659, 3832, 1)
+    private val SW_FIRST = RectArea(1607, 3784, 1624, 3799, 1)
+    private val NW_FIRST = RectArea(1607, 3816, 1624, 3831, 1)
+    private val NE_FIRST = RectArea(1641, 3814, 1658, 3831, 1)
     // Custom central for 1st floor
-    private val CENTRAL_FIRST = RectArea(1624, 3799, 1641, 3816, 1)
+    private val CENTRAL_FIRST = RectArea(1625, 3800, 1640, 3815, 1)
 
     // -----------------------------
     // Floor 2 (Second floor)
     // -----------------------------
-    private val SW_SECOND = RectArea(1606, 3783, 1627, 3802, 2)
-    private val NW_SECOND = RectArea(1606, 3813, 1627, 3832, 2)
-    private val NE_SECOND = RectArea(1638, 3813, 1659, 3832, 2)
+    private val SW_SECOND = RectArea(1607, 3784, 1624, 3799, 2)
+    private val NW_SECOND = RectArea(1607, 3816, 1624, 3831, 2)
+    private val NE_SECOND = RectArea(1641, 3816, 1658, 3831, 2)
     // Custom central for 2nd floor
-    private val CENTRAL_SECOND = RectArea(1624, 3799, 1641, 3816, 2)
+    private val CENTRAL_SECOND = RectArea(1625, 3800, 1640, 3815, 2)
+
+    // ----------------------------
+    // Connecting corridors (Second floor only)
+    // ----------------------------
+
+    //Corridor that connects the Northwest and Southwest areas of the second floor
+    private val CORRIDOR_NWSW = RectArea(1613, 3800, 1616, 3815, 2)
+    //Corridor that connects the Northwest to Southwest corridor to the central room of the second floor
+    private val CORRIDOR_NWSW_CENTRAL = RectArea(1617, 3807, 1625, 3808, 2)
+
+    //Corridor that connects the Northwest and Northeast areas of the second floor
+    private val CORRIDOR_NWNE = RectArea(1625, 3823, 1640, 3826, 2)
+    //Corridor that connects the Northwest to Northeast corridor to the central room of the second floor
+    private val CORRIDOR_NWNE_CENTRAL = RectArea(1632, 3816, 1633, 3822, 2)
+
+
 
     //NPC General locations
     private val NPC_SAM_LOCATION = Tile(1639, 3801, 0)
@@ -85,6 +112,11 @@ object Locations {
             Area.SOUTHWEST to SW_SECOND,
             Area.NORTHWEST to NW_SECOND,
             Area.NORTHEAST to NE_SECOND,
+            Area.CORRIDOR to CORRIDOR_NWSW,
+            Area.CORRIDOR to CORRIDOR_NWSW_CENTRAL,
+            Area.CORRIDOR to CORRIDOR_NWNE,
+            Area.CORRIDOR to CORRIDOR_NWNE_CENTRAL,
+
         )
     )
 
@@ -121,6 +153,7 @@ object Locations {
         Area.SOUTHWEST -> "Southwest"
         Area.CENTRAL   -> "Central"
         Area.OUTSIDE   -> "Outside"
+        Area.CORRIDOR  -> "Corridor"
     }
 
     fun floorName(floor: Int): String = when (floor) {

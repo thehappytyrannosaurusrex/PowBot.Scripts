@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: ArceuusLibrary.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary
 
 import kotlin.math.abs
@@ -15,6 +22,7 @@ import org.powbot.api.rt4.Camera
 import org.powbot.mobile.service.ScriptUploader
 import org.thehappytyrannosaurusrex.arceuuslibrary.branches.InventorySanityBranch
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.arceuuslibrary.test.PathSmoke
 
 // --- Options model ---
 object Options {
@@ -92,7 +100,7 @@ data class Config(
         ),
         ScriptConfiguration(
             name = Options.Keys.ALLOW_TRAVEL_ITEMS,
-            description = "Allow teleport runes/tabs (e.g. House tab) to remain in inventory",
+            description = "Allow teleport runes/tabs (& coins for charter) to remain in inventory",
             optionType = OptionType.BOOLEAN,
             defaultValue = "true"
         ),
@@ -178,8 +186,7 @@ class ArceuusLibrary : TreeScript() {
     }
 
     private fun cameraWithinTolerance(): Boolean {
-        val yOk = abs(yaw() - CAMERA_TARGET_YAW) <= YAW_TOL ||
-                abs((yaw() - 360) - CAMERA_TARGET_YAW) <= YAW_TOL
+        val yOk = abs(yaw() - CAMERA_TARGET_YAW) <= YAW_TOL || abs((yaw() - 360) - CAMERA_TARGET_YAW) <= YAW_TOL
         val zOk = abs(Camera.zoom - CAMERA_TARGET_ZOOM.toInt()) <= ZOOM_TOL
         val pOk = abs(Camera.pitch() - CAMERA_TARGET_PITCH) <= PITCH_TOL
         return yOk && zOk && pOk
@@ -269,6 +276,9 @@ class ArceuusLibrary : TreeScript() {
 
         initCamera()
         Logger.info("[Startup] Camera has been initialised.")
+
+        PathSmoke.runAll(npcName = "Sam", "Help")
+        Logger.info("[Test] Starting PathSmoke Test")
     }
 
     /** Stop the script if a target level is reached. */

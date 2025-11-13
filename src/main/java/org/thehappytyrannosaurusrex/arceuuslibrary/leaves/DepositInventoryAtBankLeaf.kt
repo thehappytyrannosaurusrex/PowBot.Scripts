@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: DepositInventoryAtBankLeaf.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.leaves
 
 import org.powbot.api.Tile
@@ -7,6 +14,10 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
+/**
+ * DepositInventoryAtBankLeaf: Core component of the Arceuus Library script.
+ * Auto-generated doc stub (reviewed 2025-11-12).
+ */
 class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Deposit inventory at bank") {
 
@@ -100,7 +111,7 @@ class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
 
         if (dist <= ARCEUUS_MAX_DISTANCE) {
             Logger.info("[DepositInv] Walking to Arceuus bank at $ARCEUUS_BANK_TILE (dist=${"%.1f".format(dist)}).")
-            Movement.step(ARCEUUS_BANK_TILE)
+            Movement.moveTo(ARCEUUS_BANK_TILE)
         } else {
             Logger.info("[DepositInv] Arceuus bank too far (dist=${"%.1f".format(dist)} > $ARCEUUS_MAX_DISTANCE); Movement.moveToBank().")
             Movement.moveToBank()

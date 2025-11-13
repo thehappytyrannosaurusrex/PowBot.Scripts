@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: Logger.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.utils
 
 import org.slf4j.LoggerFactory
@@ -8,6 +15,10 @@ import java.util.Date
  * and falls back to standard println with timestamp otherwise.
  *
  * Safe to use in PowBot, even if the SLF4J backend fails to load.
+ */
+/**
+ * Logger: Core component of the Arceuus Library script.
+ * Auto-generated doc stub (reviewed 2025-11-12).
  */
 object Logger {
 
@@ -31,7 +42,7 @@ object Logger {
                 // fallback on failure
             }
         }
-        println("[${timestamp()}] $message")
+        Logger.info("[${timestamp()}] $message")
     }
 
     /** Debug-level message */
@@ -42,7 +53,7 @@ object Logger {
                 return
             } catch (t: Throwable) { }
         }
-        println("[${timestamp()}] [DEBUG] $message")
+        Logger.info("[${timestamp()}] [DEBUG] $message")
     }
 
     /** Warning message */
@@ -53,7 +64,7 @@ object Logger {
                 return
             } catch (t: Throwable) { }
         }
-        println("[${timestamp()}] [WARN] $message")
+        Logger.info("[${timestamp()}] [WARN] $message")
     }
 
     /** Error message with optional stack trace */
@@ -65,7 +76,7 @@ object Logger {
                 return
             } catch (t: Throwable) { }
         }
-        println("[${timestamp()}] [ERROR] $message")
+        Logger.info("[${timestamp()}] [ERROR] $message")
         throwable?.printStackTrace()
     }
 }

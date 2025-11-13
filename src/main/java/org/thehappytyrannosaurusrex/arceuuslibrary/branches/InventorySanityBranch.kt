@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: InventorySanityBranch.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.branches
 
 import org.powbot.api.rt4.Inventory
@@ -24,6 +31,10 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
  *
  * If anything else is present -> bank.
  */
+/**
+ * InventorySanityBranch: Core component of the Arceuus Library script.
+ * Auto-generated doc stub (reviewed 2025-11-12).
+ */
 class InventorySanityBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Inventory sanity check") {
 
@@ -48,6 +59,10 @@ class InventorySanityBranch(script: ArceuusLibrary) :
         "Dust rune", "Mist rune", "Mud rune", "Steam rune", "Smoke rune"
     )
 
+    private val goldCoins = setOf(
+        "Coins",
+    )
+
     private fun isStaminaPotion(name: String): Boolean =
         staminaPrefixes.any { name.startsWith(it, ignoreCase = true) }
 
@@ -57,7 +72,7 @@ class InventorySanityBranch(script: ArceuusLibrary) :
         val allowTravel = script.shouldAllowTravelItems()
         if (!allowTravel) return false
         val lower = name.lowercase()
-        return travelNameSnippets.any { lower.contains(it) } || travelRunes.contains(name)
+        return travelNameSnippets.any { lower.contains(it) } || travelRunes.contains(name) || goldCoins.contains(name)
     }
 
     private val depositLeaf = DepositInventoryAtBankLeaf(script)

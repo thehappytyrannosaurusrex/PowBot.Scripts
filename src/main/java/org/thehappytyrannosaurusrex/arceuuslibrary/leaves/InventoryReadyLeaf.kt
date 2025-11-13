@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: InventoryReadyLeaf.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.leaves
 
 import org.powbot.api.Tile
@@ -46,6 +53,7 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
 
     private var loggedReadyInsideLibrary = false
     private var initialStaminaCheckDone = false
+    private var kickedOffLibraryFlow = false
 
     // ---- movement watchdog (library) ----
     private var lastProgressAt: Long = 0L
@@ -290,8 +298,9 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
 
         val here = local.tile()
 
-        // Inside any library rectangle?
+        // InventoryReadyLeaf.kt — inside travelToLibrary(), replace the "inside library" block with:
         if (Locations.isInsideLibrary(here)) {
+            // Rate-limit: log once per world+session even if the leaf is re-instantiated
             if (!loggedReadyInsideLibrary) {
                 Logger.info("[Travel] Arrived at Arceuus Library.")
                 loggedReadyInsideLibrary = true

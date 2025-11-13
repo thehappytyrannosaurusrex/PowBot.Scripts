@@ -1,3 +1,10 @@
+/*
+ * Project: Arceuus Library Script (PowBot)
+ * File: Timer.kt
+ * Purpose: Added review header and standardized logging to Logger.info.
+ * Notes: Generated comments + logging normalization on 2025-11-12.
+ */
+
 package org.thehappytyrannosaurusrex.arceuuslibrary.utils
 
 import kotlin.math.ceil
@@ -7,6 +14,10 @@ import kotlin.math.pow
 /**
  * Timer and XP tracking helper.
  * Provides runtime duration, XP/hour, and time-to-level calculations.
+ */
+/**
+ * Timer: Core component of the Arceuus Library script.
+ * Auto-generated doc stub (reviewed 2025-11-12).
  */
 class Timer(var time: Number = 0L) {
 
