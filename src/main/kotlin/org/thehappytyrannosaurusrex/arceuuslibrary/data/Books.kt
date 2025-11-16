@@ -10,18 +10,6 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
 import java.text.Normalizer
 
-/**
- * All Arceuus Library books with:
- *  - displayName : how it shows in your inventory (short name)
- *  - id          : legacy internal ordinal (0..15) — kept for compatibility
- *  - requestTitle: phrase NPCs use when requesting (with punctuation)
- *  - itemId      : inventory item ID (most reliable for "do we have it?")
- *
- * Use the helpers in the companion object to map from:
- *  - inventory item id/name  -> Book
- *  - NPC requested title     -> Book
- *  - "You find:" chat title  -> Book
- */
 enum class Books(
     val displayName: String,
     val requestTitle: String,
@@ -109,24 +97,16 @@ enum class Books(
     );
 
     companion object {
-        /** Map an inventory *item id* to a Book. */
+
         fun fromItemId(itemId: Int?): Books? =
             if (itemId == null) null else values().firstOrNull { it.itemId == itemId }
 
-        /**
-         * Map an inventory item *name* to a Book.
-         * Accepts light variations (curly quotes, punctuation, case).
-         */
         fun fromInventoryName(name: String?): Books? {
             if (name.isNullOrBlank()) return null
             val c = canon(name)
             return values().firstOrNull { canon(it.displayName) == c }
         }
 
-        /**
-         * Map a human-readable display title to a Book (inventory name or full request title).
-         * Useful as a permissive fallback resolver.
-         */
         fun fromDisplayName(name: String?): Books? {
             if (name.isNullOrBlank()) return null
             val c = canon(name)
@@ -147,13 +127,6 @@ enum class Books(
             return null
         }
 
-        /**
-         * Map a "You find:" chat title to a Book.
-         * - Strips <col=...> / </col>
-         * - Removes a trailing ", by ...", if present
-         * - Normalises punctuation/spacing/case/diacritics
-         * - Resolves against displayName, requestTitle, and known long-form aliases
-         */
         fun fromChatTitle(raw: String?): Books? {
             if (raw.isNullOrBlank()) return null
 
@@ -189,10 +162,6 @@ enum class Books(
             return null
         }
 
-        /**
-         * Map an NPC “requested title” (what’s inside the coloured quotes)
-         * to a Book. Tolerates colour tags, curly/straight quotes, periods, etc.
-         */
         fun fromRequestedTitle(raw: String?): Books? {
             if (raw.isNullOrBlank()) return null
             val stripped = stripColorTagsAndQuotes(raw)
@@ -210,7 +179,6 @@ enum class Books(
             }
         }
 
-        /** All item IDs (useful for Inventory.stream().id(*Book.allItemIds()) ). */
         fun allItemIds(): IntArray = values().map { it.itemId }.toIntArray()
 
         // ---------- Helpers ----------

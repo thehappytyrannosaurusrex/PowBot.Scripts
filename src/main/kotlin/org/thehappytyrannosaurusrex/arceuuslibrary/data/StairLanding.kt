@@ -2,24 +2,10 @@ package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
 import org.powbot.api.Tile
 
-/**
- * Stair landing definitions for Arceuus Library.
- *
- * Each link encodes where the player ends up after clicking "Climb"
- * on a specific stair tile (up or down). All links are bidirectional:
- * if you can go A -> B, we also encode B -> A.
- */
 data class StairLink(val from: Tile, val to: Tile, val cost: Int = 10)
 
 object StairLandings {
 
-    /**
-     * All known stair landing links.
-     *
-     * These are taken directly from "Stair Landing Tiles.txt":
-     * "Tiles correspond to where the player ends up when clicking climb on
-     * stairs in either up or down direction".
-     */
     val LINKS: List<StairLink> = listOf(
         // SW GROUND ↔ SW FIRST
         StairLink(Tile(1617, 3794, 0), Tile(1610, 3794, 1)),
@@ -76,11 +62,9 @@ object StairLandings {
         StairLink(Tile(1639, 3803, 2), Tile(1639, 3810, 1)),
     )
 
-    /** All landing links starting from [tile]. */
     fun from(tile: Tile): List<StairLink> =
         LINKS.filter { it.from == tile }
 
-    /** Just the tiles you can reach from [tile] by climbing stairs. */
     fun targetsFrom(tile: Tile): List<Tile> =
         LINKS.asSequence().filter { it.from == tile }.map { it.to }.toList()
 }

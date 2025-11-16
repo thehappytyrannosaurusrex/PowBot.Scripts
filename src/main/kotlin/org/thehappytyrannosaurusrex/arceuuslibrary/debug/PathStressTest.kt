@@ -10,16 +10,6 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
 import org.thehappytyrannosaurusrex.arceuuslibrary.pathing.LibraryPathfinder
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
-/**
- * Targeted stress test for Library pathing.
- *
- * Repeatedly:
- *   - Pick a random target tile inside the library (shelf, central area, NPC anchor).
- *   - Compute A* path from current position to target (for logging/stats).
- *   - Walk there using Movement.walkTo(target).
- *
- * Tracks success/fail counts and basic path metrics.
- */
 object PathStressTest {
 
     // How many hops to attempt in one run.
@@ -62,7 +52,7 @@ object PathStressTest {
             return
         }
 
-        Logger.info("[StressPath] Starting live stress test with $hops hops…")
+        Logger.info("[Arceuus Library] DEBUG | Starting live stress test with $hops hops…")
 
         var hopsAttempted = 0
         var hopsSucceeded = 0
@@ -86,7 +76,7 @@ object PathStressTest {
 
             hopsAttempted++
             val humanIndex = hopIndex + 1
-            Logger.info("[StressPath] Hop $humanIndex/$hops: $start -> $target")
+            Logger.info("[Arceuus Library] DEBUG | Hop $humanIndex/$hops: $start -> $target")
 
             // A* path for this hop (for diagnostics & stats)
             val path = LibraryPathfinder.findPath(start, target)
@@ -94,13 +84,13 @@ object PathStressTest {
                 Logger.warn("[StressPath] Hop $humanIndex: A* found no path from $start to $target")
                 hopsNoPath++
             } else {
-                Logger.info("[StressPath] Hop $humanIndex: A* path length=${path.size}")
+                Logger.info("[Arceuus Library] DEBUG | Hop $humanIndex: A* path length=${path.size}")
                 totalPathTiles += path.size
                 pathCount++
             }
 
             // Actually walk using Movement.walkTo
-            Logger.info("[StressPath] Hop $humanIndex: Movement.walkTo($target)")
+            Logger.info("[Arceuus Library] DEBUG | Hop $humanIndex: Movement.walkTo($target)")
             val walkOk = Movement.walkTo(target)
 
             // Wait until we are near the target or timeout
@@ -116,7 +106,7 @@ object PathStressTest {
 
             if (walkOk && arrived) {
                 hopsSucceeded++
-                Logger.info("[StressPath] Hop $humanIndex: SUCCESS (arrived near $target)")
+                Logger.info("[Arceuus Library] DEBUG | Hop $humanIndex: SUCCESS (arrived near $target)")
             } else {
                 hopsFailed++
                 Logger.warn(
@@ -128,8 +118,7 @@ object PathStressTest {
 
         val avgPathLen = if (pathCount > 0) totalPathTiles.toDouble() / pathCount else 0.0
 
-        Logger.info(
-            "[StressPath] Summary: " +
+        Logger.info("[Arceuus Library] DEBUG | Summary: " +
                     "hopsAttempted=$hopsAttempted, " +
                     "succeeded=$hopsSucceeded, failed=$hopsFailed, noPath=$hopsNoPath, " +
                     "avgAStarLength=%.2f (over $pathCount paths)"
@@ -137,11 +126,6 @@ object PathStressTest {
         )
     }
 
-    /**
-     * Pick a "reasonable" target:
-     *   - Prefer something at least a few tiles away,
-     *   - fall back to any target if all are too close.
-     */
     private fun pickReasonableTarget(start: Tile, candidates: List<Tile>, rng: Random): Tile {
         val shuffled = candidates.shuffled(rng)
 

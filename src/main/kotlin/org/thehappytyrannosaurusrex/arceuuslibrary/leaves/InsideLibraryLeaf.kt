@@ -6,18 +6,6 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
-/**
- * InsideLibraryLeaf
- *
- * Runs only while the behaviour tree thinks we are inside the Arceuus Library.
- * Before doing any library-specific work, we reuse InventoryReadyLeaf to handle:
- *  - Graceful setup / re-equip
- *  - Stamina setup / restock
- *  - Runtime stamina usage
- *
- * That way, enabling "Use Graceful" or "Use Stamina" while already in the
- * library still causes the script to fetch the gear/potions.
- */
 class InsideLibraryLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Inside Library Behaviour") {
 
@@ -44,7 +32,7 @@ class InsideLibraryLeaf(script: ArceuusLibrary) :
         // us appropriately (likely back to InventoryReadyLeaf) next poll.
         if (!Locations.isInsideLibrary(here)) {
             if (loggedOnce) {
-                Logger.info("[Library] Left library area (probably to bank); pausing library behaviour.")
+                Logger.info("[Arceuus Library] LOGIC | Left library area (probably to bank); pausing library behaviour.")
                 loggedOnce = false
             }
             return
@@ -52,7 +40,7 @@ class InsideLibraryLeaf(script: ArceuusLibrary) :
 
         // We're inside the library *and* setup didn't pull us away this tick.
         if (!loggedOnce) {
-            Logger.info("[Library] Inside Arceuus Library – core behaviour not implemented yet (placeholder).")
+            Logger.info("[Arceuus Library] LOGIC | Inside Arceuus Library – core behaviour not implemented yet (placeholder).")
             loggedOnce = true
         }
 

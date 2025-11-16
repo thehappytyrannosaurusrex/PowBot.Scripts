@@ -12,14 +12,6 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.pow
 
-/**
- * Timer and XP tracking helper.
- * Provides runtime duration, XP/hour, and time-to-level calculations.
- */
-/**
- * Timer: Core component of the Arceuus Library script.
- * Auto-generated doc stub (reviewed 2025-11-12).
- */
 class Timer(var time: Number = 0L) {
 
     companion object {

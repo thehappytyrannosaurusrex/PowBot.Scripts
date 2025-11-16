@@ -66,26 +66,13 @@ private val INTERNAL_SPECS: List<StairSpec> = listOf(
     StairSpec("Central Second→First", Area.CENTRAL, 2, 1, Rect(1638, 3807, 1639, 3804, 2), DOWN_SECOND_TO_FIRST),
 )
 
-/**
- * Public facade: find the correct stair spec/IDs for a climb between floors,
- * preferably the one whose rectangle contains the player's current tile.
- */
-/**
- * Stairs: Core component of the Arceuus Library script.
- * Auto-generated doc stub (reviewed 2025-11-12).
- */
 object Stairs {
     val SPECS: List<StairSpec> = INTERNAL_SPECS
 
-    /** All known stair object IDs (useful to restrict object streams) */
     val ALL_IDS: IntArray by lazy {
         SPECS.flatMap { it.stairIds.asList() }.distinct().toIntArray()
     }
 
-    /**
-     * Find the best matching stair spec for a climb starting at [fromTile] going to [toFloor].
-     * Priority: exact rect containment on [fromFloor] → fallback: any spec with same floors in same Area box proximity.
-     */
     fun match(fromTile: Tile, toFloor: Int): StairSpec? {
         val fromFloor = fromTile.floor
         // 1) Exact rect containment

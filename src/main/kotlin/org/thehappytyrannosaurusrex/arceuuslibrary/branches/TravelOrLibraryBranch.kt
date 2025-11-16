@@ -9,14 +9,6 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.leaves.InsideLibraryLeaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.leaves.InventoryReadyLeaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
-/**
- * TravelOrLibraryBranch
- *
- * Assumes inventory is already in a "clean" state.
- * - If the player is inside any library area (see Locations), run the
- *   core in-library behaviour.
- * - Otherwise, run the setup/travel leaf to get us there.
- */
 class TravelOrLibraryBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Travel vs Library") {
 
@@ -26,13 +18,13 @@ class TravelOrLibraryBranch(script: ArceuusLibrary) :
     override fun validate(): Boolean {
         val me = Players.local()
         if (!me.valid()) {
-            Logger.info("[Root] [TravelOrLibrary] Local player invalid; treating as outside library.")
+            Logger.info("[Arceuus Library] LOGIC | Local player invalid; treating as outside library.")
             return false
         }
         val here = me.tile()
         val inside = Locations.isInsideLibrary(here)
         if (inside) {
-            Logger.info("[Root] [TravelOrLibrary] Player inside library area; delegating to InsideLibraryLeaf.")
+            Logger.info("[Arceuus Library] LOGIC | Player inside library area; delegating to InsideLibraryLeaf.")
         }
         return inside
     }

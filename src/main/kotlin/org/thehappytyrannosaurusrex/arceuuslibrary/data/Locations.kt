@@ -10,25 +10,12 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
 import org.powbot.api.Tile
 
-/**
- * Classifies a Tile inside the Arceuus Library by **bounded rectangles** per floor.
- *
- * Areas: Northwest, Northeast, Southwest, Central (plus Outside)
- * Floors: Ground floor (0), First floor (1), Second floor (2)
- *
- * Any tile outside these bounds is considered OUTSIDE.
- */
-/**
- * Locations: Core component of the Arceuus Library script.
- * Auto-generated doc stub (reviewed 2025-11-12).
- */
 object Locations {
 
     private val LIBRARY_TILE = Tile(1632, 3804, 0)
 
     enum class Area { NORTHWEST, NORTHEAST, SOUTHWEST, CENTRAL, CORRIDOR, OUTSIDE }
 
-    /** Inclusive rectangle bound on a specific floor. */
     private data class RectArea(
         val x1: Int, val y1: Int,
         val x2: Int, val y2: Int,
@@ -60,7 +47,6 @@ object Locations {
     private val NE_FIRST = RectArea(1641, 3814, 1658, 3831, 1)
     // Custom central for 1st floor
     private val CENTRAL_FIRST = RectArea(1625, 3800, 1640, 3815, 1)
-
 
     // -----------------------------
     // Floor 2 (Second floor)
@@ -108,10 +94,6 @@ object Locations {
     val NPC_PROFESSOR_ANCHOR = Tile(1625, 3801, 0)
     val NPC_VILLIA_ANCHOR = Tile(1626, 3814, 0)
 
-    /**
-     * Areas are checked **CENTRAL first** (to avoid ambiguity with overlapping edges),
-     * then the three buildings.
-     */
     private val areasByFloor: Map<Int, List<Pair<Area, RectArea>>> = mapOf(
         0 to listOf(
             Area.CENTRAL   to CENTRAL_GROUND,
@@ -140,26 +122,14 @@ object Locations {
 
     // --- Public library anchor tiles ---
 
-    /**
-     * Ground-floor "anchor" tile for the Arceuus Library.
-     * Used for long-range travel and arrival distance checks.
-     */
     val libraryTile: Tile
         get() = LIBRARY_TILE
 
-    /**
-     * Backwards-compat alias; treat the library "center" as the same anchor tile.
-     */
     val libraryCenter: Tile
         get() = LIBRARY_TILE
 
-    /** True if the tile is inside any of the defined rectangles for its floor. */
     fun isInsideLibrary(tile: Tile): Boolean = area(tile) != Area.OUTSIDE
 
-    /**
-     * Resolve the bounded area for a tile; returns OUTSIDE if not inside the library.
-     * (Central is checked first on each floor.)
-     */
     fun area(tile: Tile): Area {
         val floorAreas = areasByFloor[tile.floor] ?: return Area.OUTSIDE
         return floorAreas.firstOrNull { it.second.contains(tile) }?.first ?: Area.OUTSIDE
@@ -181,14 +151,12 @@ object Locations {
         else -> "Floor $floor"
     }
 
-    /** e.g., "Northwest Library, First floor" or "Outside library" */
     fun describe(tile: Tile): String {
         val a = area(tile)
         return if (a == Area.OUTSIDE) "Outside library"
         else "${areaName(tile)} Library, ${floorName(tile.floor)}"
     }
 
-    /** Useful for gating logs/paint updates so we only announce when crossing areas/floors. */
     fun isDifferentAreaOrFloor(from: Tile?, to: Tile): Boolean {
         if (from == null) return true
         return area(from) != area(to) || from.floor != to.floor

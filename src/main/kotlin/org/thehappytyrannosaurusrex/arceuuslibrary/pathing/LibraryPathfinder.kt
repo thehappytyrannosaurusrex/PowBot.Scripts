@@ -5,28 +5,8 @@ import org.powbot.api.Tile
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Bookshelves
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
-
-/**
- * A* pathfinder for the Arceuus Library.
- *
- * This is a pure pathing utility:
- *  - Input: start + goal Tile (must both be inside the library)
- *  - Output: list of Tiles representing a path, or null if no path
- *
- * It uses:
- *  - LibraryNav.neighboursOf(...) for graph expansion
- *  - LibraryHeuristic.estimate(...) as the A* heuristic
- */
 object LibraryPathfinder {
 
-    /**
-     * Find a path between two tiles using A*.
-     *
-     * @param start Starting Tile
-     * @param goal Target Tile
-     * @param maxNodes Maximum number of nodes to expand before giving up
-     * @return List of Tiles from start to goal (inclusive), or null if no path found
-     */
     fun findPath(start: Tile, goal: Tile, maxNodes: Int = 20_000): List<Tile>? {
         val startNav = NavTile.from(start)
         val goalNav = NavTile.from(goal)
@@ -55,12 +35,6 @@ object LibraryPathfinder {
         return navPath.map { it.toTile() }
     }
 
-
-    /**
-     * Internal A* implementation operating on NavTile.
-     *
-     * @return List of NavTile from start to goal (inclusive), or null if no path found.
-     */
     private fun findPath(start: NavTile, goal: NavTile, maxNodes: Int): List<NavTile>? {
         // Node for the priority queue
         data class Node(val nav: NavTile, val f: Int, val h: Int)
@@ -124,13 +98,10 @@ object LibraryPathfinder {
         }
 
         // No path found
-        Logger.info("[Pathfinder] No path found from $start to $goal.")
+        Logger.info("[Arceuus Library] PATHING | No path found from $start to $goal.")
         return null
     }
 
-    /**
-     * Reconstruct the path from a parent map and final node.
-     */
     private fun reconstructPath(
         cameFrom: Map<NavTile, NavTile>,
         goal: NavTile

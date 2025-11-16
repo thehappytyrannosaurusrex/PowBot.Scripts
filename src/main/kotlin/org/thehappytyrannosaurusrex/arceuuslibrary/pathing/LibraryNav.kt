@@ -6,11 +6,6 @@ import org.powbot.api.rt4.CollisionMap
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.StairLandings
 
-/**
- * Normalised tile representation for our pathfinder.
- *
- * Wraps (x, y, floor) so we can safely use it as a map/set key.
- */
 data class NavTile(val x: Int, val y: Int, val floor: Int) {
     fun toTile(): Tile = Tile(x, y, floor)
 
@@ -19,49 +14,20 @@ data class NavTile(val x: Int, val y: Int, val floor: Int) {
     }
 }
 
-/**
- * Step costs used by the pathfinder.
- *
- * Using 10 instead of 1 lets us tweak weights later without going into fractions.
- */
 object StepCost {
     const val WALK: Int = 10         // cost of a normal ground step
     const val STAIR: Int = 20        // cost of a stair transition (per StairLink)
 }
 
-/**
- * Low-level navigation helpers for the Arceuus Library.
- *
- * This knows ONLY about tiles, bounds, collisions and stairs.
- * No bookshelf / NPC / request logic should live here.
- */
 object LibraryNav {
 
-    /**
-     * Collision flag bits that make a tile unwalkable.
-     *
-     * These are standard OSRS clipping bits (blocked object / full block / floor dec).
-     * If this feels too strict in practice, we can relax the mask later.
-     */
     private const val UNWALKABLE_MASK: Int = 0x100 or 0x200000 or 0x40000
 
-    /**
-     * Is this tile in any of the library areas (on any floor)?
-     */
     fun inLibrary(tile: Tile): Boolean = Locations.isInsideLibrary(tile)
     fun inLibrary(nav: NavTile): Boolean = inLibrary(nav.toTile())
 
-    /**
-     * Optional override for tests: if set, isWalkable(tile) will return this instead
-     * of using Movement.collisionMap.
-     *
-     * In production this should remain null.
-     */
     var testWalkableOverride: ((Tile) -> Boolean)? = null
 
-    /**
-     * Is the given tile walkable according to our bounds and the collision map?
-     */
     fun isWalkable(tile: Tile): Boolean {
         // Test/debug hook: lets us bypass collision in tests or while debugging.
         testWalkableOverride?.let { override ->
@@ -92,11 +58,6 @@ object LibraryNav {
 
     fun isWalkable(nav: NavTile): Boolean = isWalkable(nav.toTile())
 
-    /**
-     * 4-way (N/E/S/W) neighbours on the same floor.
-     *
-     * Returns a concrete List instead of a Sequence to avoid coroutine dependencies.
-     */
     private fun orthogonalNeighbours(nav: NavTile): List<Pair<NavTile, Int>> {
         val result = mutableListOf<Pair<NavTile, Int>>()
 
@@ -121,12 +82,6 @@ object LibraryNav {
         return result
     }
 
-    /**
-     * Stair neighbours: if this tile is a stair landing, we can also go
-     * to the linked landing tile(s) on another floor.
-     *
-     * Returns a concrete List instead of a Sequence.
-     */
     private fun stairNeighbours(nav: NavTile): List<Pair<NavTile, Int>> {
         val result = mutableListOf<Pair<NavTile, Int>>()
         val fromTile = nav.toTile()
@@ -142,11 +97,6 @@ object LibraryNav {
         return result
     }
 
-    /**
-     * All neighbours reachable in one logical step (ground walk or stair climb).
-     *
-     * Returned as (neighbour, cost) pairs to support weighted A*.
-     */
     fun neighboursOf(nav: NavTile): List<Pair<NavTile, Int>> {
         val result = mutableListOf<Pair<NavTile, Int>>()
         result += orthogonalNeighbours(nav)
@@ -155,12 +105,6 @@ object LibraryNav {
     }
 }
 
-/**
- * Heuristic for A* in the library.
- *
- * Uses Manhattan distance in tiles plus a penalty per floor difference,
- * all in the same cost units as g (multiples of StepCost.WALK).
- */
 object LibraryHeuristic {
 
     fun estimate(from: NavTile, to: NavTile): Int {

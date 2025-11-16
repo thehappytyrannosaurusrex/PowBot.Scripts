@@ -14,10 +14,6 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
-/**
- * DepositInventoryAtBankLeaf: Core component of the Arceuus Library script.
- * Auto-generated doc stub (reviewed 2025-11-12).
- */
 class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Deposit inventory at bank") {
 
@@ -62,14 +58,14 @@ class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
             lastDistance = distNow
             lastProgressAt = now
             if (noProgressTries > 0) {
-                Logger.info("[DepositInv] [DepositInv:Progress] Distance decreased by ${"%.1f".format(shrink)} tiles (now=${"%.1f".format(distNow)}). Resetting attempts.")
+                Logger.info("[Arceuus Library] LOGIC | Distance decreased by ${"%.1f".format(shrink)} tiles (now=${"%.1f".format(distNow)}). Resetting attempts.")
             }
             noProgressTries = 0
             return
         }
         if (windowElapsed) {
             noProgressTries++
-            Logger.info("[DepositInv] [Failsafe] Bank no-progress attempt $noProgressTries/$MAX_NO_PROGRESS_TRIES (dist=${"%.1f".format(prev)}→${"%.1f".format(distNow)} in ~${NO_PROGRESS_WINDOW_MS/1000}s; need ≥${"%.0f".format(REQUIRED_PROGRESS_TILES)}).")
+            Logger.info("[Arceuus Library] LOGIC | Bank no-progress attempt $noProgressTries/$MAX_NO_PROGRESS_TRIES (dist=${"%.1f".format(prev)}→${"%.1f".format(distNow)} in ~${NO_PROGRESS_WINDOW_MS/1000}s; need ≥${"%.0f".format(REQUIRED_PROGRESS_TILES)}).")
             lastDistance = distNow
             lastProgressAt = now
             if (noProgressTries >= MAX_NO_PROGRESS_TRIES) {
@@ -85,7 +81,7 @@ class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
 
     override fun execute() {
         if (!hasNonBookItems()) {
-            Logger.info("[DepositInv] [DepositInv] No non-book items left; skipping bank.")
+            Logger.info("[Arceuus Library] LOGIC | No non-book items left; skipping bank.")
             noProgressTries = 0
             return
         }
@@ -96,24 +92,24 @@ class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
         if (Bank.present()) {
             noProgressTries = 0
             if (!Bank.opened()) {
-                Logger.info("[DepositInv] [DepositInv] Bank nearby, attempting to open.")
+                Logger.info("[Arceuus Library] LOGIC | Bank nearby, attempting to open.")
                 Bank.open()
                 return
             }
             if (Inventory.isNotEmpty()) {
-                Logger.info("[DepositInv] [DepositInv] Depositing full inventory.")
+                Logger.info("[Arceuus Library] LOGIC | Depositing full inventory.")
                 Bank.depositInventory()
             } else {
-                Logger.info("[DepositInv] [DepositInv] Inventory already empty; nothing to deposit.")
+                Logger.info("[Arceuus Library] LOGIC | Inventory already empty; nothing to deposit.")
             }
             return
         }
 
         if (dist <= ARCEUUS_MAX_DISTANCE) {
-            Logger.info("[DepositInv] [DepositInv] Walking to Arceuus bank at $ARCEUUS_BANK_TILE (dist=${"%.1f".format(dist)}).")
+            Logger.info("[Arceuus Library] LOGIC | Walking to Arceuus bank at $ARCEUUS_BANK_TILE (dist=${"%.1f".format(dist)}).")
             Movement.moveTo(ARCEUUS_BANK_TILE)
         } else {
-            Logger.info("[DepositInv] [DepositInv] Arceuus bank too far (dist=${"%.1f".format(dist)} > $ARCEUUS_MAX_DISTANCE); Movement.moveToBank().")
+            Logger.info("[Arceuus Library] LOGIC | Arceuus bank too far (dist=${"%.1f".format(dist)} > $ARCEUUS_MAX_DISTANCE); Movement.moveToBank().")
             Movement.moveToBank()
         }
     }

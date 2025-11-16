@@ -23,10 +23,6 @@ data class Bookshelf(
     val floor: Int
 )
 
-/**
- * Bookshelves: Core component of the Arceuus Library script.
- * Auto-generated doc stub (reviewed 2025-11-12).
- */
 object Bookshelves {
     val ALL: List<Bookshelf> = listOf(
         Bookshelf(

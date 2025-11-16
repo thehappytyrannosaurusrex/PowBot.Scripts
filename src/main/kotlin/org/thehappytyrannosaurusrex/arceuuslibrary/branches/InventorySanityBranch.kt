@@ -10,25 +10,6 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.leaves.InventoryReadyLeaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.branches.TravelOrLibraryBranch
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 
-/**
- * Step 2: Evaluate the inventory.
- *
- * Allowed (always):
- *  - Known Arceuus book item ids
- *  - Any Graceful piece (by name)
- *  - Any stamina potion dose (by name)
- *
- * Allowed (optional; if user enabled "Allow Travel Items"):
- *  - "Teleport" tabs/items (by name snippet)
- *  - Common travel runes (Law, Air, Earth, Water, Fire, Dust, Mist, Mud, Steam, Smoke)
- *  - Xeric’s talisman, Dramen staff (basic mobility helpers)
- *
- * If anything else is present -> bank.
- */
-/**
- * InventorySanityBranch: Core component of the Arceuus Library script.
- * Auto-generated doc stub (reviewed 2025-11-12).
- */
 class InventorySanityBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Inventory sanity check") {
 
@@ -41,7 +22,7 @@ class InventorySanityBranch(script: ArceuusLibrary) :
 
     private val staminaPrefixes = listOf("Stamina potion(")
 
-    // centralized travel allow-list (by lowercased name)
+    // Centralised allow-list of travel items (by lowercased name)
     private val travelNameSnippets = setOf(
         "teleport",                      // any tab that contains "teleport"
         "xeric's talisman",
@@ -84,8 +65,7 @@ class InventorySanityBranch(script: ArceuusLibrary) :
         }
 
         if (hasNonAllowedItems) {
-            Logger.info(
-                "[InventorySanity] Found non-allowed items; will bank " +
+            Logger.info("[Arceuus Library] LOGIC | Found non-allowed items; will bank " +
                         "(travel items allowed=${script.shouldAllowTravelItems()})."
             )
         }
