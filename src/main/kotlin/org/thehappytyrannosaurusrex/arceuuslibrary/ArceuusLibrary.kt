@@ -1,0 +1,432 @@
+package org.thehappytyrannosaurusrex.arceuuslibrary
+
+import org.powbot.api.Condition
+import org.powbot.api.rt4.Constants
+import org.powbot.api.rt4.Components
+import org.powbot.api.rt4.Players
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
+import org.powbot.api.rt4.Skills
+import org.powbot.api.rt4.Game
+import org.powbot.api.rt4.Widgets
+import org.powbot.api.script.OptionType
+import org.powbot.api.script.ScriptCategory
+import org.powbot.api.script.ScriptConfiguration
+import org.powbot.api.script.ScriptManifest
+import org.powbot.api.script.tree.TreeComponent
+import org.powbot.api.script.tree.TreeScript
+import org.powbot.dax.api.DaxWalker
+import org.powbot.dax.teleports.Teleport
+import org.powbot.api.rt4.Camera
+import org.powbot.mobile.service.ScriptUploader
+import org.thehappytyrannosaurusrex.arceuuslibrary.branches.RootBranch
+import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import kotlin.random.Random
+import org.thehappytyrannosaurusrex.arceuuslibrary.debug.ComprehensivePathDebug
+
+
+// --- Options model ---
+object Options {
+    object Keys {
+        const val XP_TYPE = "XP Type"
+        const val USE_GRACEFUL = "Use Graceful Set"
+        const val USE_STAMINA = "Use Stamina Potions"
+        const val ALLOW_TRAVEL_ITEMS = "Allow Travel Items"
+        const val STOP_AT_LEVEL = "Stop At Target Level"
+    }
+
+    object Values {
+        const val MAGIC = "Magic"
+        const val RUNECRAFTING = "Runecrafting"
+    }
+}
+
+/** High-level user choice for what XP the script should focus on. */
+enum class XpType(val label: String, val skillId: Int) {
+    MAGIC(Options.Values.MAGIC, Constants.SKILLS_MAGIC),
+    RUNECRAFTING(Options.Values.RUNECRAFTING, Constants.SKILLS_RUNECRAFTING);
+
+    companion object {
+        fun fromLabel(label: String?): XpType =
+            entries.firstOrNull { it.label.equals(label, ignoreCase = true) } ?: MAGIC
+    }
+}
+
+/** Immutable configuration snapshot built from script options at startup. */
+data class Config(
+    val xpType: XpType,
+    val useGraceful: Boolean,
+    val useStamina: Boolean,
+    val allowTravelItems: Boolean,
+    /** 0 disables stop condition */
+    val stopAtLevel: Int
+) {
+    val trackedSkillId: Int get() = xpType.skillId
+
+    fun summary(): String =
+        "XP=${xpType.label} (skillId=$trackedSkillId) | " +
+                "Graceful=$useGraceful | " +
+                "Stamina=$useStamina | " +
+                "AllowTravelItems=$allowTravelItems | " +
+                "StopAt=${if (stopAtLevel == 0) "disabled" else stopAtLevel}"
+}
+
+@ScriptManifest(
+    name = "Arceuus Library",
+    description = "Learns the Arceuus Library layout and fetches NPC-requested books for XP.",
+    version = "0.2.0",
+    author = "thehappytyrannosaurusrex",
+    category = ScriptCategory.Magic
+)
+@ScriptConfiguration.List(
+    [
+        ScriptConfiguration(
+            name = Options.Keys.XP_TYPE,
+            description = "Which skill to train using the Book of Arcane Knowledge.",
+            optionType = OptionType.STRING,
+            allowedValues = [Options.Values.MAGIC, Options.Values.RUNECRAFTING],
+            defaultValue = Options.Values.MAGIC
+        ),
+        ScriptConfiguration(
+            name = Options.Keys.USE_GRACEFUL,
+            description = "Should we use full Graceful? (Will fetch)",
+            optionType = OptionType.BOOLEAN,
+            defaultValue = "false"
+        ),
+        ScriptConfiguration(
+            name = Options.Keys.USE_STAMINA,
+            description = "Use and restock stamina potions",
+            optionType = OptionType.BOOLEAN,
+            defaultValue = "false"
+        ),
+        ScriptConfiguration(
+            name = Options.Keys.ALLOW_TRAVEL_ITEMS,
+            description = "Allow teleport runes/tabs (& coins for charter) to remain in inventory",
+            optionType = OptionType.BOOLEAN,
+            defaultValue = "true"
+        ),
+        ScriptConfiguration(
+            name = Options.Keys.STOP_AT_LEVEL,
+            description = "Stop automatically when reaching this level in the chosen XP type (0 = ignore).",
+            optionType = OptionType.INTEGER,
+            defaultValue = "0"
+        )
+    ]
+)
+class ArceuusLibrary : TreeScript() {
+
+    // Live configuration built on start
+    private lateinit var config: Config
+
+    // --- Root of our behavior tree ---
+    override val rootComponent: TreeComponent<*>
+        get() = RootBranch(this)
+
+    // --- Accessors used by branches/leaves later ---
+    fun selectedXpType(): XpType = config.xpType
+    fun shouldUseGraceful(): Boolean = config.useGraceful
+    fun shouldUseStamina(): Boolean = config.useStamina
+    fun shouldAllowTravelItems(): Boolean = config.allowTravelItems
+    fun targetLevel(): Int = config.stopAtLevel
+    fun trackedSkillId(): Int = config.trackedSkillId
+
+    // Dax teleport blacklist
+    object DaxConfig {
+        val BLACKLISTED_TELEPORTS = arrayOf(
+            Teleport.SOUL_WARS_MINIGAME,
+            Teleport.LAST_MAN_STANDING_MINIGAME,
+        )
+    }
+
+    // Camera settings & cadence
+    companion object {
+        private const val CAMERA_TARGET_YAW = 0           // exact north, degrees [0..359]
+        private const val CAMERA_TARGET_ZOOM = 0.0        // percent [0..100]
+        private const val CAMERA_TARGET_PITCH = 99        // percent [0..99]
+        private const val CAMERA_MIN_PITCH = 85
+
+        // run maintenance every 12s once we’ve locked in
+        private const val CAMERA_MAINTENANCE_MS = 60_000L
+
+        // during startup we’ll try to lock every 2 ticks until stable
+        private const val CAMERA_START_GRACE_MS = 6_000L
+        private const val CAMERA_START_RETRY_MS = 1200L
+
+        // how close is “good enough”
+        private const val YAW_TOL = 2           // degrees
+        private const val ZOOM_TOL = 5.0        // percent
+        private const val PITCH_TOL = 10         // percent
+    }
+    private var lastCameraMaintainAt: Long = 0L
+    private var cameraStartupUntil: Long = 0L
+    private var lastCameraStartupTryAt: Long = 0L
+    private var cameraLockedOnce: Boolean = false
+    private var cameraTargetPitch: Int = CAMERA_TARGET_PITCH
+
+    private fun yaw(): Int = Camera.yaw()
+    private fun setYaw(target: Int) {
+        // PowBot Camera.angle(Int) sets absolute yaw in degrees
+        Camera.angle(target)
+    }
+
+    private var nextCamMaintainAt = 0L
+
+    private fun initCamera() {
+        // Pick a random pitch for this run between 85 and 99 (inclusive)
+        cameraTargetPitch = Random.nextInt(CAMERA_MIN_PITCH, CAMERA_TARGET_PITCH + 1)
+
+        Logger.info(
+            "[Main] [Camera] Initializing to yaw=$CAMERA_TARGET_YAW°, " +
+                    "zoom=${CAMERA_TARGET_ZOOM.toInt()}%, pitch=$cameraTargetPitch."
+        )
+
+        // Snap once
+        setYaw(CAMERA_TARGET_YAW)
+        Camera.pitch(cameraTargetPitch)
+        Camera.moveZoomSlider(CAMERA_TARGET_ZOOM)
+
+        // Start a short “startup window” of aggressive retries
+        val now = System.currentTimeMillis()
+        cameraStartupUntil = now + CAMERA_START_GRACE_MS
+        lastCameraStartupTryAt = 0L
+        lastCameraMaintainAt = now // so we don’t immediately do the 12s cadence
+        cameraLockedOnce = false
+
+        Condition.sleep(1200)
+
+        tidyViewportUi()
+    }
+
+    /**
+    Our camera correction function, currently not needed but may have to use in the future. Camera settings only
+    in initCamera
+
+    private fun cameraWithinTolerance(): Boolean {
+        // We intentionally ignore yaw: caller may want to rotate the camera freely.
+        val zOk = abs(Camera.zoom - CAMERA_TARGET_ZOOM.toInt()) <= ZOOM_TOL
+        val pOk = abs(Camera.pitch() - cameraTargetPitch) <= PITCH_TOL
+        return zOk && pOk
+    }
+
+    private fun maintainCamera() {
+        val now = System.currentTimeMillis()
+
+        // Aggressive startup retries: try to lock zoom + pitch during the initial window.
+        if (now < cameraStartupUntil) {
+            if (now - lastCameraStartupTryAt >= CAMERA_START_RETRY_MS) {
+                if (!cameraWithinTolerance()) {
+                    Camera.pitch(cameraTargetPitch)
+                    Camera.moveZoomSlider(CAMERA_TARGET_ZOOM)
+
+                    // We just opened the camera/settings panel -> close it again.
+                    closeSidePanelIfOpen()
+
+                    Logger.info(
+                        "[Main] [Camera] Startup snap → zoom=${Camera.zoom}%, pitch=${Camera.pitch()}%"
+                    )
+                } else {
+                    cameraLockedOnce = true
+                }
+                lastCameraStartupTryAt = now
+            }
+            return
+        }
+
+        // Startup window passed, mark as locked if we never did
+        if (!cameraLockedOnce) {
+            cameraLockedOnce = true
+        }
+
+        // Regular cadence (every ~12s)
+        if (now - lastCameraMaintainAt < CAMERA_MAINTENANCE_MS) return
+        lastCameraMaintainAt = now
+
+        // If we drifted, gently correct. Keep corrections idempotent and only touch zoom + pitch.
+        if (!cameraWithinTolerance()) {
+            Logger.info("[Main] [Camera] Maintenance correction.")
+
+            // Prevent the pitch from ever dropping below our minimum
+            if (Camera.pitch() < CAMERA_MIN_PITCH) {
+                cameraTargetPitch = maxOf(cameraTargetPitch, CAMERA_MIN_PITCH)
+            }
+
+            Camera.pitch(cameraTargetPitch)
+            Camera.moveZoomSlider(CAMERA_TARGET_ZOOM)
+
+            // Again, we just used the zoom slider -> settings panel will be open -> close it.
+            closeSidePanelIfOpen()
+        }
+    }
+    */
+
+
+    /**
+     * Try to keep the 3D viewport as clear as possible:
+     *  - close the right-side tab panel (inventory/settings/etc)
+     *  - minimise the chat box via widget 46
+     */
+
+    private fun tidyViewportUi() {
+        closeSidePanelIfOpen()
+        minimiseChatBoxIfPossible()
+    }
+
+    private fun isChatBoxExpanded(): Boolean {
+        // If any component of widget 162 is viewable, the chatbox is expanded
+        val anyChatComponent = Components.stream()
+            .widget(162)
+            .viewable()
+            .first()
+
+        return anyChatComponent.valid()
+    }
+
+    private fun closeSidePanelIfOpen() {
+        try {
+            if (Game.closeOpenTab()) {
+                Logger.info("[Main] [UI] Closed side panel")
+            }
+        } catch (e: Exception) {
+            Logger.error("[Main] [UI] Failed to close side panel: ${e.message}")
+        }
+    }
+
+    private fun minimiseChatBoxIfPossible() {
+        try {
+            // Only toggle if the chatbox is currently expanded.
+            if (!isChatBoxExpanded()) {
+                // Already minimised; do nothing so we don't re-open it.
+                Logger.info("[Main] [UI] Chat box already minimised; skipping toggle.")
+                return
+            }
+
+            // Widget 601 is the chatbox button group, component 46 is the toggle button
+            val widget = Widgets.widget(601)
+            if (!widget.valid()) {
+                return
+            }
+
+            val toggleComponent = widget.component(46)
+            if (!toggleComponent.valid()) {
+                return
+            }
+
+            val actions = toggleComponent.actions()
+            val hasToggleChat = actions.any { it.equals("Toggle chat", ignoreCase = true) }
+
+            Logger.info("[Main] [UI] Minimising chat box via widget(601).component(46).")
+
+            if (hasToggleChat) {
+                toggleComponent.click("Toggle chat")
+            } else {
+                // Fallback – usually still works as a toggle
+                toggleComponent.click()
+            }
+        } catch (e: Exception) {
+            Logger.error("[Main] [UI] Failed to minimise chat box: ${e.message}")
+        }
+    }
+
+
+    // --- Option parsing & validation ---
+    private inline fun <reified T> optionOrDefault(key: String, default: T): T = try {
+        getOption<T>(key)
+    } catch (_: IllegalArgumentException) {
+        Logger.error("[Main] [Config] Option '$key' not found; using default '$default'.")
+        default
+    } catch (e: Exception) {
+        Logger.error("[Main] [Config] Failed to read option '$key': ${e.message}. Using default '$default'.")
+        default
+    }
+
+    private fun reloadConfig(): Config {
+        val xpTypeLabel = optionOrDefault(Options.Keys.XP_TYPE, Options.Values.MAGIC)
+        val xpType = XpType.fromLabel(xpTypeLabel)
+        val useGraceful = optionOrDefault(Options.Keys.USE_GRACEFUL, false)
+        val useStamina = optionOrDefault(Options.Keys.USE_STAMINA, false)
+        val allowTravel = optionOrDefault(Options.Keys.ALLOW_TRAVEL_ITEMS, true)
+        val rawStop = optionOrDefault(Options.Keys.STOP_AT_LEVEL, 0)
+        val stopAtLevel = if (rawStop == 0) 0 else rawStop.coerceIn(1, 99)
+
+        return Config(
+            xpType = xpType,
+            useGraceful = useGraceful,
+            useStamina = useStamina,
+            allowTravelItems = allowTravel,
+            stopAtLevel = stopAtLevel
+        ).also {
+            Logger.info("[Main] [Config] ${it.summary()}")
+        }
+    }
+
+    // --- Script lifecycle ---
+    override fun onStart() {
+        super.onStart()
+
+        Logger.info("[Main] [Startup] Arceuus Library script starting…")
+
+        config = reloadConfig()
+        Logger.info("[Main] [Startup] User options parsed and validated.")
+
+        try {
+            DaxWalker.blacklistTeleports(*DaxConfig.BLACKLISTED_TELEPORTS)
+            Logger.info("[Main] [DaxWalker] Applying DaxWalker blacklists...")
+        } catch (e: Exception) {
+            Logger.error("[Main] [DaxWalker] Failed to apply teleport blacklist: ${e.message}")
+        }
+
+        initCamera()
+        Logger.info("[Main] [Startup] Camera has been initialised.")
+
+        // --- DEBUG: A* smoke test ---
+        val me = Players.local()
+        val anchor = Locations.SW_SECOND_ANCHOR   // southwest second-floor anchor in Locations.kt
+
+        // Comprehensive multi-hop A* debug (logging only, no movement).
+        // Comment this out when you don't need the debug spam.
+        ComprehensivePathDebug.run()
+
+        // Single tile debug
+        // if (me.valid()) {
+        //    Logger.info("[DebugPath] Computing path from ${me.tile()} to $anchor")
+        //    ComprehensivePathDebug.debugLogPath(me.tile(), anchor)
+        // } else {
+        //    Logger.warn("[DebugPath] Local player is not valid; skipping debug path.")
+        //}
+        // --- END DEBUG ---
+
+    }
+
+    /** Stop the script if a target level is reached. */
+    private fun stopIfReachedTargetLevel(): Boolean {
+        val target = config.stopAtLevel
+        if (target <= 0) return false
+        val current = Skills.realLevel(config.trackedSkillId)
+        if (current >= target) {
+            Logger.info("[Main] [Shutdown] ${config.xpType.label.uppercase()} reached target level $target.")
+            controller.stop()
+            return true
+        }
+        return false
+    }
+
+    override fun poll() {
+        // Corrective camera actions -> maintainCamera()
+        if (stopIfReachedTargetLevel()) return
+        super.poll()
+    }
+
+    override fun onStop() {
+        Logger.info("[Main] [Shutdown] Arceuus Library script has stopped.")
+    }
+}
+
+/** Local test launcher. */
+fun main() {
+    ScriptUploader().uploadAndStart(
+        "Arceuus Library",
+        "main",
+        "127.0.0.1:5555",
+        true,
+        false
+    )
+}
