@@ -22,6 +22,7 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.branches.RootBranch
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
 import kotlin.random.Random
 import org.thehappytyrannosaurusrex.arceuuslibrary.debug.ComprehensivePathDebug
+import org.thehappytyrannosaurusrex.arceuuslibrary.debug.PathStressTest
 
 
 // --- Options model ---
@@ -191,82 +192,12 @@ class ArceuusLibrary : TreeScript() {
         lastCameraMaintainAt = now // so we don’t immediately do the 12s cadence
         cameraLockedOnce = false
 
-        Condition.sleep(1200)
+        Condition.sleep(1000)
 
-        tidyViewportUi()
+        closeSidePanelIfOpen()
     }
-
-    /**
-    Our camera correction function, currently not needed but may have to use in the future. Camera settings only
-    in initCamera
-
-    private fun cameraWithinTolerance(): Boolean {
-        // We intentionally ignore yaw: caller may want to rotate the camera freely.
-        val zOk = abs(Camera.zoom - CAMERA_TARGET_ZOOM.toInt()) <= ZOOM_TOL
-        val pOk = abs(Camera.pitch() - cameraTargetPitch) <= PITCH_TOL
-        return zOk && pOk
-    }
-
-    private fun maintainCamera() {
-        val now = System.currentTimeMillis()
-
-        // Aggressive startup retries: try to lock zoom + pitch during the initial window.
-        if (now < cameraStartupUntil) {
-            if (now - lastCameraStartupTryAt >= CAMERA_START_RETRY_MS) {
-                if (!cameraWithinTolerance()) {
-                    Camera.pitch(cameraTargetPitch)
-                    Camera.moveZoomSlider(CAMERA_TARGET_ZOOM)
-
-                    // We just opened the camera/settings panel -> close it again.
-                    closeSidePanelIfOpen()
-
-                    Logger.info(
-                        "[Main] [Camera] Startup snap → zoom=${Camera.zoom}%, pitch=${Camera.pitch()}%"
-                    )
-                } else {
-                    cameraLockedOnce = true
-                }
-                lastCameraStartupTryAt = now
-            }
-            return
-        }
-
-        // Startup window passed, mark as locked if we never did
-        if (!cameraLockedOnce) {
-            cameraLockedOnce = true
-        }
-
-        // Regular cadence (every ~12s)
-        if (now - lastCameraMaintainAt < CAMERA_MAINTENANCE_MS) return
-        lastCameraMaintainAt = now
-
-        // If we drifted, gently correct. Keep corrections idempotent and only touch zoom + pitch.
-        if (!cameraWithinTolerance()) {
-            Logger.info("[Main] [Camera] Maintenance correction.")
-
-            // Prevent the pitch from ever dropping below our minimum
-            if (Camera.pitch() < CAMERA_MIN_PITCH) {
-                cameraTargetPitch = maxOf(cameraTargetPitch, CAMERA_MIN_PITCH)
-            }
-
-            Camera.pitch(cameraTargetPitch)
-            Camera.moveZoomSlider(CAMERA_TARGET_ZOOM)
-
-            // Again, we just used the zoom slider -> settings panel will be open -> close it.
-            closeSidePanelIfOpen()
-        }
-    }
-    */
-
-
-    /**
-     * Try to keep the 3D viewport as clear as possible:
-     *  - close the right-side tab panel (inventory/settings/etc)
-     *  - minimise the chat box via widget 46
-     */
 
     private fun tidyViewportUi() {
-        closeSidePanelIfOpen()
         minimiseChatBoxIfPossible()
     }
 
@@ -377,22 +308,14 @@ class ArceuusLibrary : TreeScript() {
         initCamera()
         Logger.info("[Main] [Startup] Camera has been initialised.")
 
-        // --- DEBUG: A* smoke test ---
-        val me = Players.local()
-        val anchor = Locations.SW_SECOND_ANCHOR   // southwest second-floor anchor in Locations.kt
+        minimiseChatBoxIfPossible()
 
-        // Comprehensive multi-hop A* debug (logging only, no movement).
-        // Comment this out when you don't need the debug spam.
-        ComprehensivePathDebug.run()
+        // --- MULTI-HOP LIVE DEBUG (comment out when you're done testing) ---
+        // ComprehensivePathDebug.runLive()
 
-        // Single tile debug
-        // if (me.valid()) {
-        //    Logger.info("[DebugPath] Computing path from ${me.tile()} to $anchor")
-        //    ComprehensivePathDebug.debugLogPath(me.tile(), anchor)
-        // } else {
-        //    Logger.warn("[DebugPath] Local player is not valid; skipping debug path.")
-        //}
-        // --- END DEBUG ---
+        // --- LIVE STRESS TEST (DEBUG ONLY) ---
+        // Requires you to start inside the library (any floor).
+        PathStressTest.runLiveStress(hops = 30)
 
     }
 
@@ -410,7 +333,6 @@ class ArceuusLibrary : TreeScript() {
     }
 
     override fun poll() {
-        // Corrective camera actions -> maintainCamera()
         if (stopIfReachedTargetLevel()) return
         super.poll()
     }
