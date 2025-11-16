@@ -18,5 +18,6 @@ object Options {
         const val DEBUG_NONE = "Disabled"
         const val DEBUG_PATH_STRESS = "Path stress test"
         const val DEBUG_COMPREHENSIVE_PATH = "Comprehensive path debug"
+        const val DEBUG_CHAT_PARSER = "Chat parser debug"
     }
 }

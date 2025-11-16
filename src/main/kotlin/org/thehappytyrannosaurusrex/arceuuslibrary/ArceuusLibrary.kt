@@ -21,6 +21,12 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.debug.PathStressTest
 import org.thehappytyrannosaurusrex.arceuuslibrary.travel.DaxConfig
 import org.thehappytyrannosaurusrex.arceuuslibrary.ui.ViewportUi
 import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.powbot.api.event.MessageEvent
+import org.powbot.api.rt4.Chat
+import com.google.common.eventbus.Subscribe
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.ChatSource
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatEvent
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatParser
 
 @ScriptManifest(
     name = "Arceuus Library",
@@ -69,7 +75,8 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
             allowedValues = [
                 Options.Values.DEBUG_NONE,
                 Options.Values.DEBUG_PATH_STRESS,
-                Options.Values.DEBUG_COMPREHENSIVE_PATH
+                Options.Values.DEBUG_COMPREHENSIVE_PATH,
+                Options.Values.DEBUG_CHAT_PARSER
             ],
             defaultValue = Options.Values.DEBUG_NONE
         )
@@ -124,20 +131,107 @@ class ArceuusLibrary : TreeScript() {
         }
     }
 
+    // Nice, book-aware logging for parser events.
+    private fun logChatParserEvent(event: LibraryChatEvent, source: ChatSource) {
+        val sourceTag = when (source) {
+            ChatSource.SERVER -> "SERVER"
+            ChatSource.CHAT -> "CHAT"
+        }
+
+        when (event) {
+            is LibraryChatEvent.ShelfBookFound -> {
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: ShelfBookFound = ${event.book.name}"
+                )
+            }
+
+            LibraryChatEvent.ShelfEmpty -> {
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: ShelfEmpty"
+                )
+            }
+
+            LibraryChatEvent.LayoutReset -> {
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: LayoutReset"
+                )
+            }
+
+            is LibraryChatEvent.CustomerRequested -> {
+                val bookEnum = event.book?.name ?: "UNKNOWN"
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: CustomerRequested = $bookEnum"
+                )
+            }
+
+            is LibraryChatEvent.PlayerReplyToRequest -> {
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: PlayerReply kind=${event.kind}"
+                )
+            }
+
+            is LibraryChatEvent.NpcMetaDialogue -> {
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: NpcMetaDialogue kind=${event.kind}"
+                )
+            }
+
+            else -> {
+                // Safety net in case we ever add more subclasses later.
+                Logger.info(
+                    "[Arceuus Library] DEBUG | $sourceTag: Unhandled event type=${event::class.simpleName}"
+                )
+            }
+        }
+    }
+
+
+    // Used only in CHAT_PARSER_DEBUG mode to avoid spamming the same chat line.
+    private var lastParsedChatMessage: String? = null
+
+    // In CHAT_PARSER_DEBUG mode, this polls the Chat API and feeds messages into the parser.
+    private fun chatParserDebugTick() {
+        if (!Chat.chatting()) {
+            lastParsedChatMessage = null
+            return
+        }
+
+        val msg = Chat.getChatMessage()
+        if (msg.isNullOrBlank() || msg == lastParsedChatMessage) {
+            return
+        }
+
+        lastParsedChatMessage = msg
+
+        val event = LibraryChatParser.parse(msg, ChatSource.CHAT) ?: return
+        logChatParserEvent(event, ChatSource.CHAT)
+    }
+
+    // Server messages (e.g. empty shelf / layout reset / "You find: ...")
+    @Subscribe
+    fun onServerMessage(event: MessageEvent) {
+        val msg = event.message ?: return
+        val parsed = LibraryChatParser.parse(msg, ChatSource.SERVER) ?: return
+
+        logChatParserEvent(parsed, ChatSource.SERVER)
+    }
+
     private fun runSelectedDebugMode() {
         when (config.debugMode) {
             DebugMode.NONE -> {
-                // No debug behaviour; normal run.
                 Logger.info("[Arceuus Library] MAIN | Debug mode disabled.")
             }
             DebugMode.PATH_STRESS_TEST -> {
-                Logger.info("[Arceuus Library] MAIN | Running path stress test debug mode…")
-                // Requires  start inside the library (any floor).
+                Logger.info("[Arceuus Library] DEBUG | Running path stress test debug mode…")
+                // Requires you to start inside the library (any floor).
                 PathStressTest.runLiveStress(hops = 30)
             }
             DebugMode.COMPREHENSIVE_PATH_DEBUG -> {
-                Logger.info("[Arceuus Library] MAIN | Running comprehensive path debug mode…")
+                Logger.info("[Arceuus Library] DEBUG | Running comprehensive path debug mode…")
                 ComprehensivePathDebug.runLive()
+            }
+            DebugMode.CHAT_PARSER_DEBUG -> {
+                Logger.info("[Arceuus Library] DEBUG | Chat parser debug mode active. Script will not move or click; only logs parsed chat/server events.")
             }
         }
     }
@@ -156,8 +250,15 @@ class ArceuusLibrary : TreeScript() {
     }
 
     override fun poll() {
+        // In chat parser debug mode we don't run the behaviour tree at all.
+        // This ensures there is no movement/clicking; you can manually play.
+        if (config.debugMode == DebugMode.CHAT_PARSER_DEBUG) {
+            chatParserDebugTick()
+            return
+        }
+
         if (stopIfReachedTargetLevel()) return
-        // Future: cameraController.tick() if maintenance needed
+        // Future: cameraController.tick() if you want maintenance
         super.poll()
     }
 
