@@ -1,7 +1,7 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.config
 
 import org.powbot.api.script.tree.TreeScript
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 // Convenience helper to safely read script options with defaults.
 private inline fun <reified T> TreeScript.optionOrDefault(key: String, default: T): T = try {

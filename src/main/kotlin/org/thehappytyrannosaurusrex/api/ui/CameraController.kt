@@ -1,8 +1,8 @@
-package org.thehappytyrannosaurusrex.arceuuslibrary.camera
+package org.thehappytyrannosaurusrex.api.ui
 
 import org.powbot.api.Condition
 import org.powbot.api.rt4.Camera
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 import kotlin.random.Random
 
 class CameraController {

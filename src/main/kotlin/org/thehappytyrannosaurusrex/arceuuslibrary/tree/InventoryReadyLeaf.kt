@@ -5,7 +5,7 @@
  * Notes: Generated comments + logging normalization on 2025-11-12.
  */
 
-package org.thehappytyrannosaurusrex.arceuuslibrary.leaves
+package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.Condition
 import org.powbot.api.Tile
@@ -14,7 +14,7 @@ import org.powbot.api.script.tree.Leaf
 import org.powbot.dax.api.models.RunescapeBank
 import org.powbot.dax.api.DaxWalker
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 import kotlin.random.Random
 
 class InventoryReadyLeaf(script: ArceuusLibrary) :

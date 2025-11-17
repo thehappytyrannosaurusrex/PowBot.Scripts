@@ -6,7 +6,7 @@
  */
 
 package org.thehappytyrannosaurusrex.arceuuslibrary.data
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 import java.text.Normalizer
 

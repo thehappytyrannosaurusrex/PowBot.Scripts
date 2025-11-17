@@ -8,7 +8,7 @@ import org.powbot.api.rt4.Players
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Bookshelves
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
 import org.thehappytyrannosaurusrex.arceuuslibrary.pathing.LibraryPathfinder
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 object PathStressTest {
 

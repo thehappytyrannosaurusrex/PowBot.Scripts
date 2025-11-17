@@ -1,7 +1,7 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.solver
 
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 object LibraryChatParser {
 

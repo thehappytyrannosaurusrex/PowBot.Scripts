@@ -1,4 +1,4 @@
-package org.thehappytyrannosaurusrex.arceuuslibrary.branches
+package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.script.tree.Branch
 import org.powbot.api.script.tree.TreeComponent

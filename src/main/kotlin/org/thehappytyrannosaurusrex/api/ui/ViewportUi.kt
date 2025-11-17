@@ -1,9 +1,10 @@
-package org.thehappytyrannosaurusrex.arceuuslibrary.ui
+package org.thehappytyrannosaurusrex.api.ui
 
 import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Game
+import org.powbot.api.rt4.Widget
 import org.powbot.api.rt4.Widgets
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class ViewportUi {
 
@@ -12,14 +13,23 @@ class ViewportUi {
         minimiseChatBoxIfPossible()
     }
 
+    /**
+     * Returns true if the main chatbox is expanded (the row with All/Game/Public is visible),
+     * false if the chatbox has been collapsed/hidden by the user.
+     */
     private fun isChatBoxExpanded(): Boolean {
-        // If any component of widget 162 is viewable, the chatbox is expanded
-        val anyChatComponent = Components.stream()
-            .widget(162)
-            .viewable()
-            .first()
+        val chatWidget = Widgets.widget(162)
+        if (!chatWidget.valid()) {
+            return false
+        }
 
-        return anyChatComponent.valid()
+        // Component(1) is the top row (All / Game / Public / etc)
+        val header = chatWidget.component(1)
+        if (!header.valid()) {
+            return false
+        }
+
+        return header.visible()
     }
 
     private fun closeSidePanelIfOpen() {

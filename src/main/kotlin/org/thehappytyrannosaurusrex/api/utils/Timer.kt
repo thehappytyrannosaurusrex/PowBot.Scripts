@@ -5,8 +5,8 @@
  * Notes: Generated comments + logging normalization on 2025-11-12.
  */
 
-package org.thehappytyrannosaurusrex.arceuuslibrary.utils
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+package org.thehappytyrannosaurusrex.api.utils
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 import kotlin.math.ceil
 import kotlin.math.floor

@@ -1,10 +1,10 @@
-package org.thehappytyrannosaurusrex.arceuuslibrary.leaves
+package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.rt4.Players
 import org.powbot.api.script.tree.Leaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class InsideLibraryLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Inside Library Behaviour") {

@@ -3,7 +3,7 @@ package org.thehappytyrannosaurusrex.arceuuslibrary.pathing
 import kotlin.random.Random
 import org.powbot.api.Tile
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Bookshelves
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 object LibraryPathfinder {
 

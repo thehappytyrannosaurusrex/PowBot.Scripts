@@ -1,13 +1,13 @@
-package org.thehappytyrannosaurusrex.arceuuslibrary.branches
+package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.rt4.Players
 import org.powbot.api.script.tree.Branch
 import org.powbot.api.script.tree.TreeComponent
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
-import org.thehappytyrannosaurusrex.arceuuslibrary.leaves.InsideLibraryLeaf
-import org.thehappytyrannosaurusrex.arceuuslibrary.leaves.InventoryReadyLeaf
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.arceuuslibrary.tree.InsideLibraryLeaf
+import org.thehappytyrannosaurusrex.arceuuslibrary.tree.InventoryReadyLeaf
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class TravelOrLibraryBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Travel vs Library") {

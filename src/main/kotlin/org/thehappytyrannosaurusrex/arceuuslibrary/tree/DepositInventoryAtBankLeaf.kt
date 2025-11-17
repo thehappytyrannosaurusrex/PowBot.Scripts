@@ -5,14 +5,14 @@
  * Notes: Generated comments + logging normalization on 2025-11-12.
  */
 
-package org.thehappytyrannosaurusrex.arceuuslibrary.leaves
+package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.api.script.tree.Leaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Deposit inventory at bank") {

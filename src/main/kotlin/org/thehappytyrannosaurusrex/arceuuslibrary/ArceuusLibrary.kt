@@ -8,9 +8,8 @@ import org.powbot.api.script.ScriptManifest
 import org.powbot.api.script.tree.TreeComponent
 import org.powbot.api.script.tree.TreeScript
 import org.powbot.dax.api.DaxWalker
-import org.powbot.mobile.service.ScriptUploader
-import org.thehappytyrannosaurusrex.arceuuslibrary.branches.RootBranch
-import org.thehappytyrannosaurusrex.arceuuslibrary.camera.CameraController
+import org.thehappytyrannosaurusrex.arceuuslibrary.tree.RootBranch
+import org.thehappytyrannosaurusrex.api.ui.CameraController
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.Config
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.Options
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.XpType
@@ -18,15 +17,19 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.config.DebugMode
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.buildConfig
 import org.thehappytyrannosaurusrex.arceuuslibrary.debug.ComprehensivePathDebug
 import org.thehappytyrannosaurusrex.arceuuslibrary.debug.PathStressTest
-import org.thehappytyrannosaurusrex.arceuuslibrary.travel.DaxConfig
-import org.thehappytyrannosaurusrex.arceuuslibrary.ui.ViewportUi
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.pathing.DaxConfig
+import org.thehappytyrannosaurusrex.api.ui.ViewportUi
+import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatEvent
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatParser
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.ChatSource
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.Bookshelves
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibrarySolver
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
+import org.powbot.api.rt4.Players
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.rt4.Chat
 import com.google.common.eventbus.Subscribe
-import org.thehappytyrannosaurusrex.arceuuslibrary.solver.ChatSource
-import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatEvent
-import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatParser
 
 @ScriptManifest(
     name = "Arceuus Library",
@@ -70,13 +73,14 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatParser
         ),
         ScriptConfiguration(
             name = Options.Keys.DEBUG_MODE,
-            description = "Debug behaviour when running in a dev environment. Disable on live accounts.",
+            description = "DEBUG MODE",
             optionType = OptionType.STRING,
             allowedValues = [
                 Options.Values.DEBUG_NONE,
                 Options.Values.DEBUG_PATH_STRESS,
                 Options.Values.DEBUG_COMPREHENSIVE_PATH,
-                Options.Values.DEBUG_CHAT_PARSER
+                Options.Values.DEBUG_CHAT_PARSER,
+                Options.Values.DEBUG_MANUAL_SOLVER
             ],
             defaultValue = Options.Values.DEBUG_NONE
         )
@@ -86,6 +90,25 @@ class ArceuusLibrary : TreeScript() {
 
     // Live configuration built on start
     private lateinit var config: Config
+
+    // Solver core (sequence-based)
+    private val librarySolver = LibrarySolver(
+        slotCount = Bookshelves.ALL.maxOf { it.shelfIndex } + 1
+        // using default sequences & isDoubleIndex = { false } for now
+    )
+
+    /**
+     * Returns the solver shelf index for the bookshelf we’re currently standing at,
+     * or null if we’re not standing on any bookshelf’s standing tile.
+     */
+    private fun currentShelfIndex(): Int? {
+        val me = Players.local()
+        val tile = me.tile()
+
+        val shelf = Bookshelves.ALL.firstOrNull { it.standingTile == tile } ?: return null
+        return shelf.shelfIndex
+    }
+
 
     private val cameraController = CameraController()
     private val viewportUi = ViewportUi()
@@ -117,9 +140,9 @@ class ArceuusLibrary : TreeScript() {
         cameraController.init()
         Logger.info("[Arceuus Library] MAIN | Camera has been initialised.")
 
-        viewportUi.tidyOnStart()
-
         runSelectedDebugMode()
+
+        viewportUi.tidyOnStart()
     }
 
     private fun applyDaxBlacklist() {
@@ -130,6 +153,7 @@ class ArceuusLibrary : TreeScript() {
             Logger.error("[Arceuus Library] MAIN | Failed to apply teleport blacklist: ${e.message}")
         }
     }
+
 
     // Nice, book-aware logging for parser events.
     private fun logChatParserEvent(event: LibraryChatEvent, source: ChatSource) {
@@ -186,9 +210,6 @@ class ArceuusLibrary : TreeScript() {
     }
 
 
-    // Used only in CHAT_PARSER_DEBUG mode to avoid spamming the same chat line.
-    private var lastParsedChatMessage: String? = null
-
     // In CHAT_PARSER_DEBUG mode, this polls the Chat API and feeds messages into the parser.
     private fun chatParserDebugTick() {
         if (!Chat.chatting()) {
@@ -204,8 +225,94 @@ class ArceuusLibrary : TreeScript() {
         lastParsedChatMessage = msg
 
         val event = LibraryChatParser.parse(msg, ChatSource.CHAT) ?: return
-        logChatParserEvent(event, ChatSource.CHAT)
+        handleParsedEvent(event, ChatSource.CHAT)
     }
+
+
+    // Used only in parser/solver debug modes to avoid spamming the same chat line.
+    private var lastParsedChatMessage: String? = null
+
+    private fun handleParsedEvent(event: LibraryChatEvent, source: ChatSource) {
+        logChatParserEvent(event, source)
+
+        if (config.debugMode != DebugMode.MANUAL_SOLVER_DEBUG) {
+            return
+        }
+
+        when (event) {
+            is LibraryChatEvent.ShelfBookFound -> {
+                val idx = currentShelfIndex()
+                if (idx == null) {
+                    Logger.error("[Arceuus Library] SOLVER | ShelfBookFound but no matching standing tile for player.")
+                    return
+                }
+
+                librarySolver.mark(idx, event.book)
+                logSolverStateAfterObservation(idx, event.book)
+            }
+
+
+            LibraryChatEvent.LayoutReset -> {
+                librarySolver.reset("layout reset chat message")
+            }
+
+            else -> {
+                // We'll use other events (requests, rewards) later,
+                // for now they don't affect the layout solver.
+            }
+        }
+    }
+
+    private fun logSolverStateAfterObservation(index: Int, book: Books) {
+        // High-level summary (raw debug string from solver)
+        Logger.info(
+            "[Arceuus Library] SOLVER | After obs index=$index book=${book.name}: ${librarySolver.debugSummary()}"
+        )
+
+        var observedCount = 0      // shelves we actually clicked/confirmed
+        var predictedCount = 0     // shelves solver has inferred from the pattern
+
+        // One line per shelf with either:
+        // - a known layout book, or
+        // - one or more possible layout books
+        for (shelf in Bookshelves.ALL) {
+            val idx = shelf.shelfIndex
+            val known = librarySolver.getKnownBook(idx)
+            val possible = librarySolver.getPossibleBooks(idx)
+
+            if (known == null && possible.isEmpty()) {
+                continue
+            }
+
+            val tile = shelf.objTile
+            val coord = "${tile.x}, ${tile.y}, ${tile.floor}"
+            val area = shelf.area
+
+            val bookLabel = if (known != null) {
+                observedCount++
+                "[${known.name}]"
+            } else {
+                predictedCount++
+                val possStr = possible.joinToString(",") { it.name }
+                "[$possStr]"
+            }
+
+            Logger.info(
+                "[Arceuus Library] SOLVER | $bookLabel at shelf $idx ($coord) in $area"
+            )
+        }
+
+        val totalSlots = observedCount + predictedCount
+        val stateLabel = librarySolver.state.name
+
+        Logger.info(
+            "[Arceuus Library] SOLVER | Layout $stateLabel: observed=$observedCount, predicted=$predictedCount, totalKnownSlots=$totalSlots"
+        )
+    }
+
+
+
+
 
     // Server messages (e.g. empty shelf / layout reset / "You find: ...")
     @Subscribe
@@ -213,8 +320,9 @@ class ArceuusLibrary : TreeScript() {
         val msg = event.message ?: return
         val parsed = LibraryChatParser.parse(msg, ChatSource.SERVER) ?: return
 
-        logChatParserEvent(parsed, ChatSource.SERVER)
+        handleParsedEvent(parsed, ChatSource.SERVER)
     }
+
 
     private fun runSelectedDebugMode() {
         when (config.debugMode) {
@@ -233,6 +341,10 @@ class ArceuusLibrary : TreeScript() {
             DebugMode.CHAT_PARSER_DEBUG -> {
                 Logger.info("[Arceuus Library] DEBUG | Chat parser debug mode active. Script will not move or click; only logs parsed chat/server events.")
             }
+            DebugMode.MANUAL_SOLVER_DEBUG -> {
+                Logger.info("[Arceuus Library] DEBUG | Manual solver debug mode active. No movement/clicking; solver updates from your actions.")
+                librarySolver.reset("entered manual solver debug")
+            }
         }
     }
 
@@ -250,29 +362,20 @@ class ArceuusLibrary : TreeScript() {
     }
 
     override fun poll() {
-        // In chat parser debug mode we don't run the behaviour tree at all.
-        // This ensures there is no movement/clicking; you can manually play.
-        if (config.debugMode == DebugMode.CHAT_PARSER_DEBUG) {
+        if (config.debugMode == DebugMode.CHAT_PARSER_DEBUG ||
+            config.debugMode == DebugMode.MANUAL_SOLVER_DEBUG
+        ) {
+            // Only watch chat & server messages, no clicks or movement.
             chatParserDebugTick()
             return
         }
 
         if (stopIfReachedTargetLevel()) return
-        // Future: cameraController.tick() if you want maintenance
         super.poll()
     }
+
 
     override fun onStop() {
         Logger.info("[Arceuus Library] MAIN | Arceuus Library script has stopped.")
     }
-}
-
-fun main() {
-    ScriptUploader().uploadAndStart(
-        "Arceuus Library",
-        "main",
-        "127.0.0.1:5555",
-        true,
-        false
-    )
 }

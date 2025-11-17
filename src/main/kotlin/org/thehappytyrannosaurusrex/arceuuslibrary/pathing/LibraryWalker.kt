@@ -4,7 +4,7 @@ import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.Movement
 import org.powbot.api.rt4.Players
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.Logger
 
 object LibraryWalker {
 

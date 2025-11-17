@@ -7,7 +7,7 @@
 
 package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
-import org.thehappytyrannosaurusrex.arceuuslibrary.utils.Logger;
+import org.thehappytyrannosaurusrex.api.utils.Logger;
 import org.powbot.api.Tile
 import kotlin.math.max
 import kotlin.math.min

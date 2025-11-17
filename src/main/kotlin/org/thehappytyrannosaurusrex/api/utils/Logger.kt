@@ -5,7 +5,7 @@
  * Notes: Generated comments + logging normalization on 2025-11-12.
  */
 
-package org.thehappytyrannosaurusrex.arceuuslibrary.utils
+package org.thehappytyrannosaurusrex.api.utils
 import org.slf4j.LoggerFactory
 import java.text.SimpleDateFormat
 import java.util.Date

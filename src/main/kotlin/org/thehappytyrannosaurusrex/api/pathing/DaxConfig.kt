@@ -1,4 +1,4 @@
-package org.thehappytyrannosaurusrex.arceuuslibrary.travel
+package org.thehappytyrannosaurusrex.api.pathing
 
 import org.powbot.dax.teleports.Teleport
 

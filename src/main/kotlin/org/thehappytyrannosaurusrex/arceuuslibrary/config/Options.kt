@@ -15,9 +15,10 @@ object Options {
         const val MAGIC = "Magic"
         const val RUNECRAFTING = "Runecrafting"
 
-        const val DEBUG_NONE = "Disabled"
-        const val DEBUG_PATH_STRESS = "Path stress test"
-        const val DEBUG_COMPREHENSIVE_PATH = "Comprehensive path debug"
-        const val DEBUG_CHAT_PARSER = "Chat parser debug"
+        const val DEBUG_NONE = "DISABLED"
+        const val DEBUG_COMPREHENSIVE_PATH = "MULTI-HOP PATH TEST"
+        const val DEBUG_PATH_STRESS = "PATH STRESS TEST"
+        const val DEBUG_CHAT_PARSER = "MANUAL CHAT PARSER"
+        const val DEBUG_MANUAL_SOLVER = "MANUAL LIBRARY SOLVER"
     }
 }
