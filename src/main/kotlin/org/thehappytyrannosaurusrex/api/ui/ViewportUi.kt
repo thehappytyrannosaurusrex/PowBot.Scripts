@@ -9,8 +9,9 @@ import org.thehappytyrannosaurusrex.api.utils.Logger
 class ViewportUi {
 
     fun tidyOnStart() {
-        closeSidePanelIfOpen()
         minimiseChatBoxIfPossible()
+        closeInventoryOverlayIfOpen()
+        closeSidePanelIfOpen()
     }
 
     /**
@@ -32,13 +33,53 @@ class ViewportUi {
         return header.visible()
     }
 
+    /**
+     * Returns true if the inventory overlay (widget 149, component 0) is visible.
+     */
+    private fun isInventoryOverlayOpen(): Boolean {
+        val inventoryWidget = Widgets.widget(149)
+        if (!inventoryWidget.valid()) {
+            return false
+        }
+
+        val root = inventoryWidget.component(0)
+        if (!root.valid()) {
+            return false
+        }
+
+        return root.visible()
+    }
+
+    /**
+     * Closes the resizable inventory overlay if it's currently open.
+     *
+     * On some layouts this isn't handled by Game.closeOpenTab(), so we tap
+     * widget(149).component(0) directly.
+     */
+    private fun closeInventoryOverlayIfOpen() {
+        try {
+            if (!isInventoryOverlayOpen()) {
+                return
+            }
+
+            val inventoryWidget = Widgets.widget(149)
+            val root = inventoryWidget.component(0)
+
+            Logger.info("[Viewport] Closed side panel.")
+            Game.closeOpenTab()
+        } catch (e: Exception) {
+            Logger.error("[Viewport] Failed to close side panel: ${e.message}")
+        }
+    }
+
+
     private fun closeSidePanelIfOpen() {
         try {
             if (Game.closeOpenTab()) {
-                Logger.info("[Arceuus Library] UI | Closed side panel")
+                Logger.info("[Viewport] Closed side panel")
             }
         } catch (e: Exception) {
-            Logger.error("[Arceuus Library] UI | Failed to close side panel: ${e.message}")
+            Logger.error("[Viewport] Failed to close side panel: ${e.message}")
         }
     }
 
@@ -47,7 +88,7 @@ class ViewportUi {
             // Only toggle if the chatbox is currently expanded.
             if (!isChatBoxExpanded()) {
                 // Already minimised; do nothing so we don't re-open it.
-                Logger.info("[Arceuus Library] UI | Chat box already minimised; skipping toggle.")
+                Logger.info("[Viewport] Chat box already minimised; skipping toggle.")
                 return
             }
 
@@ -65,7 +106,7 @@ class ViewportUi {
             val actions = toggleComponent.actions()
             val hasToggleChat = actions.any { it.equals("Toggle chat", ignoreCase = true) }
 
-            Logger.info("[Arceuus Library] UI | Minimising chat box via widget(601).component(46).")
+            Logger.info("[Viewport] Minimising chat box via widget(601).component(46).")
 
             if (hasToggleChat) {
                 toggleComponent.click("Toggle chat")
@@ -74,7 +115,7 @@ class ViewportUi {
                 toggleComponent.click()
             }
         } catch (e: Exception) {
-            Logger.error("[Arceuus Library] UI | Failed to minimise chat box: ${e.message}")
+            Logger.error("[Viewport] Failed to minimise chat box: ${e.message}")
         }
     }
 }

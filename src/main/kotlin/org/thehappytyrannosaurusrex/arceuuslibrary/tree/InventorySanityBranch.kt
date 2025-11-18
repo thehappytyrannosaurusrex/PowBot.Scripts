@@ -9,6 +9,7 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.tree.DepositInventoryAtBankLe
 import org.thehappytyrannosaurusrex.arceuuslibrary.tree.InventoryReadyLeaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.tree.TravelOrLibraryBranch
 import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.thehappytyrannosaurusrex.api.inventory.InventorySanity
 
 class InventorySanityBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Inventory sanity check") {
@@ -50,22 +51,18 @@ class InventorySanityBranch(script: ArceuusLibrary) :
     private val travelOrLibraryBranch = TravelOrLibraryBranch(script)
 
     override fun validate(): Boolean {
-        if (Inventory.isEmpty()) return false
-
-        val hasNonAllowedItems = Inventory.stream().anyMatch { item ->
-            val id = item.id()
-            if (id == -1) return@anyMatch false
-            val name = item.name()
-            val ok =
-                (id in bookItemIds) ||
-                        isGraceful(name) ||
-                        isStaminaPotion(name) ||
-                        isTravelAllowed(name)
-            !ok
-        }
+        val hasNonAllowedItems = InventorySanity.hasNonAllowedItems(
+            allowedItemIds = bookItemIds,
+            allowedByName = listOf<(String) -> Boolean>(
+                ::isGraceful,
+                ::isStaminaPotion,
+                { name -> isTravelAllowed(name) }
+            )
+        )
 
         if (hasNonAllowedItems) {
-            Logger.info("[Arceuus Library] LOGIC | Found non-allowed items; will bank " +
+            Logger.info(
+                "[Arceuus Library] LOGIC | Found non-allowed items; will bank " +
                         "(travel items allowed=${script.shouldAllowTravelItems()})."
             )
         }

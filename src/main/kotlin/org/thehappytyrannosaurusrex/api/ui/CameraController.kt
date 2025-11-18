@@ -47,7 +47,7 @@ class CameraController {
         // Pick a random pitch for this run between 85 and 99 (inclusive)
         cameraTargetPitch = Random.nextInt(CAMERA_MIN_PITCH, CAMERA_TARGET_PITCH + 1)
 
-        Logger.info("[Arceuus Library] CAMERA | Initializing to yaw=$CAMERA_TARGET_YAW°, " +
+        Logger.info("[Camera] Initializing to yaw=$CAMERA_TARGET_YAW°, " +
                     "zoom=${CAMERA_TARGET_ZOOM.toInt()}%, pitch=$cameraTargetPitch."
         )
 
@@ -71,7 +71,7 @@ class CameraController {
         val now = System.currentTimeMillis()
         if (now < nextCamMaintainAt) return
 
-        Logger.info("[Arceuus Library] CAMERA | Maintenance tick (placeholder).")
+        Logger.info("[Camera] Maintenance tick (placeholder).")
         nextCamMaintainAt = now + CAMERA_MAINTENANCE_MS
     }
 }

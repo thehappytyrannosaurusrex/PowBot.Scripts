@@ -20,5 +20,6 @@ object Options {
         const val DEBUG_PATH_STRESS = "PATH STRESS TEST"
         const val DEBUG_CHAT_PARSER = "MANUAL CHAT PARSER"
         const val DEBUG_MANUAL_SOLVER = "MANUAL LIBRARY SOLVER"
+        const val DEBUG_CHAT_AND_MANUAL_SOLVER = "CHAT PARSER + MANUAL SOLVER"
     }
 }

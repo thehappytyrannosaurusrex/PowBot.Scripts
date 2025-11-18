@@ -6,13 +6,17 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.config.DebugMode
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Bookshelves
 import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.thehappytyrannosaurusrex.api.chat.ChatSource
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
 
 /**
  * Owns all Arceuus Library chat parsing + manual solver debug behavior.
  *
  * - CHAT_PARSER_DEBUG: logs parsed events only.
  * - MANUAL_SOLVER_DEBUG: logs parsed events AND feeds them into LibrarySolver.
+ * - CHAT_AND_MANUAL_SOLVER_DEBUG: same as MANUAL_SOLVER_DEBUG, but exposed as a combined mode option.
  */
+
 class LibraryDebugController(
     /** Current debug mode (we ask the script each tick so it can change at runtime). */
     private val debugModeProvider: () -> DebugMode
@@ -40,7 +44,10 @@ class LibraryDebugController(
      */
     fun tickChatDebug() {
         val mode = debugModeProvider()
-        if (mode != DebugMode.CHAT_PARSER_DEBUG && mode != DebugMode.MANUAL_SOLVER_DEBUG) {
+        if (mode != DebugMode.CHAT_PARSER_DEBUG &&
+            mode != DebugMode.MANUAL_SOLVER_DEBUG &&
+            mode != DebugMode.CHAT_AND_MANUAL_SOLVER_DEBUG
+        ) {
             return
         }
 
@@ -65,7 +72,10 @@ class LibraryDebugController(
      */
     fun onServerMessage(message: String) {
         val mode = debugModeProvider()
-        if (mode != DebugMode.CHAT_PARSER_DEBUG && mode != DebugMode.MANUAL_SOLVER_DEBUG) {
+        if (mode != DebugMode.CHAT_PARSER_DEBUG &&
+            mode != DebugMode.MANUAL_SOLVER_DEBUG &&
+            mode != DebugMode.CHAT_AND_MANUAL_SOLVER_DEBUG
+        ) {
             return
         }
 
@@ -85,7 +95,9 @@ class LibraryDebugController(
         logChatParserEvent(event, source)
 
         // In CHAT_PARSER_DEBUG we stop here: only logging.
-        if (mode != DebugMode.MANUAL_SOLVER_DEBUG) {
+        if (mode != DebugMode.MANUAL_SOLVER_DEBUG &&
+            mode != DebugMode.CHAT_AND_MANUAL_SOLVER_DEBUG
+        ) {
             return
         }
 
@@ -148,12 +160,6 @@ class LibraryDebugController(
                 )
             }
 
-            is LibraryChatEvent.PlayerReplyToRequest -> {
-                Logger.info(
-                    "[Arceuus Library] DEBUG | $sourceTag: PlayerReply kind=${event.kind}"
-                )
-            }
-
             is LibraryChatEvent.NpcMetaDialogue -> {
                 Logger.info(
                     "[Arceuus Library] DEBUG | $sourceTag: NpcMetaDialogue kind=${event.kind}"
@@ -208,6 +214,8 @@ class LibraryDebugController(
             val tile = shelf.objTile
             val coord = "${tile.x}, ${tile.y}, ${tile.floor}"
             val area = shelf.area
+            val floor = Locations.floorName(shelf.floor).uppercase()
+
 
             val bookLabel = if (known != null) {
                 observedCount++
@@ -219,7 +227,7 @@ class LibraryDebugController(
             }
 
             Logger.info(
-                "[Arceuus Library] SOLVER | $bookLabel at shelf $idx ($coord) in $area"
+                "[Arceuus Library] SOLVER | $bookLabel at shelf $idx ($coord) in $area $floor"
             )
         }
 

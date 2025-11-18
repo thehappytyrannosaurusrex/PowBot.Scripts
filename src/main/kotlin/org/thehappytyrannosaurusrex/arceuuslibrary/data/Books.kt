@@ -184,14 +184,16 @@ enum class Books(
         // ---------- Helpers ----------
 
         private fun stripColorTagsAndQuotes(s: String): String =
-            s.replace(Regex("""(?i)<\s*col\s*=\s*[^>]+>"""), "") // any <col=...>
-                .replace(Regex("""(?i)</\s*col\s*>"""), "")       // closing </col>
+            s.replace(Regex("""(?i)<\s*col\s*=\s*[^>]+>"""), "")   // any <col=...>
+                .replace(Regex("""(?i)</\s*col\s*>"""), "")        // closing </col>
+                .replace(Regex("""(?i)<br\s*/?>"""), " ")          // any <br> / <br/>
                 .replace("‘", "")
                 .replace("’", "")
                 .replace("“", "")
                 .replace("”", "")
                 .replace("\"", "")
                 .trim()
+
 
         private fun canon(s: String): String {
             // 1) remove colour tags (if any) and enclosing quotes

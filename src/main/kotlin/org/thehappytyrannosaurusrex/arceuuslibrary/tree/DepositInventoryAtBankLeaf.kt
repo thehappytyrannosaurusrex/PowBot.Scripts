@@ -8,10 +8,12 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.Tile
-import org.powbot.api.rt4.*
+import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Players
 import org.powbot.api.script.tree.Leaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
+import org.thehappytyrannosaurusrex.api.bank.BankUtils
 import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
@@ -47,27 +49,40 @@ class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
     private fun updateProgressAndMaybeFail(distNow: Double) {
         val now = System.currentTimeMillis()
         val prev = lastDistance
+
         if (prev == null) {
             lastDistance = distNow
             lastProgressAt = now
+            noProgressTries = 0
             return
         }
+
         val shrink = prev - distNow
         val windowElapsed = now - lastProgressAt >= NO_PROGRESS_WINDOW_MS
+
         if (shrink >= REQUIRED_PROGRESS_TILES) {
             lastDistance = distNow
             lastProgressAt = now
             if (noProgressTries > 0) {
-                Logger.info("[Arceuus Library] LOGIC | Distance decreased by ${"%.1f".format(shrink)} tiles (now=${"%.1f".format(distNow)}). Resetting attempts.")
+                Logger.info(
+                    "[Arceuus Library] LOGIC | Distance to Arceuus bank shrank by ~${"%.1f".format(shrink)} tiles " +
+                            "(now=${"%.1f".format(distNow)}). Resetting attempts."
+                )
             }
             noProgressTries = 0
             return
         }
+
         if (windowElapsed) {
             noProgressTries++
-            Logger.info("[Arceuus Library] LOGIC | Bank no-progress attempt $noProgressTries/$MAX_NO_PROGRESS_TRIES (dist=${"%.1f".format(prev)}→${"%.1f".format(distNow)} in ~${NO_PROGRESS_WINDOW_MS/1000}s; need ≥${"%.0f".format(REQUIRED_PROGRESS_TILES)}).")
+            Logger.info(
+                "[Arceuus Library] LOGIC | Bank no-progress window #$noProgressTries " +
+                        "(dist=${"%.1f".format(prev)}→${"%.1f".format(distNow)}, " +
+                        "window=${NO_PROGRESS_WINDOW_MS / 1000}s; need ≥${"%.0f".format(REQUIRED_PROGRESS_TILES)})."
+            )
             lastDistance = distNow
             lastProgressAt = now
+
             if (noProgressTries >= MAX_NO_PROGRESS_TRIES) {
                 stopWithError("[Failsafe] Could not make progress toward bank after $MAX_NO_PROGRESS_TRIES windows. Stopping.")
             }
@@ -89,28 +104,17 @@ class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :
         val dist = distanceToArceuusBank()
         updateProgressAndMaybeFail(dist)
 
-        if (Bank.present()) {
-            noProgressTries = 0
-            if (!Bank.opened()) {
-                Logger.info("[Arceuus Library] LOGIC | Bank nearby, attempting to open.")
-                Bank.open()
-                return
-            }
-            if (Inventory.isNotEmpty()) {
-                Logger.info("[Arceuus Library] LOGIC | Depositing full inventory.")
-                Bank.depositInventory()
-            } else {
-                Logger.info("[Arceuus Library] LOGIC | Inventory already empty; nothing to deposit.")
-            }
-            return
-        }
+        val bankingDone = BankUtils.depositInventoryToNearestBank(
+            preferredBankTile = ARCEUUS_BANK_TILE,
+            maxPreferredDistance = ARCEUUS_MAX_DISTANCE,
+            logPrefix = "[Arceuus Library] BANK |"
+        )
 
-        if (dist <= ARCEUUS_MAX_DISTANCE) {
-            Logger.info("[Arceuus Library] LOGIC | Walking to Arceuus bank at $ARCEUUS_BANK_TILE (dist=${"%.1f".format(dist)}).")
-            Movement.moveTo(ARCEUUS_BANK_TILE)
-        } else {
-            Logger.info("[Arceuus Library] LOGIC | Arceuus bank too far (dist=${"%.1f".format(dist)} > $ARCEUUS_MAX_DISTANCE); Movement.moveToBank().")
-            Movement.moveToBank()
+        if (bankingDone) {
+            // Reset progress tracking ready for the next banking cycle.
+            lastDistance = null
+            lastProgressAt = 0L
+            noProgressTries = 0
         }
     }
 }

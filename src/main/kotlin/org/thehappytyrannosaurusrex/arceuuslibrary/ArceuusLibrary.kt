@@ -27,7 +27,7 @@ import com.google.common.eventbus.Subscribe
 @ScriptManifest(
     name = "Arceuus Library",
     description = "Learns the Arceuus Library layout and fetches NPC-requested books for XP.",
-    version = "0.3.0",
+    version = "0.0.9",
     author = "thehappytyrannosaurusrex",
     category = ScriptCategory.Magic
 )
@@ -73,7 +73,8 @@ import com.google.common.eventbus.Subscribe
                 Options.Values.DEBUG_COMPREHENSIVE_PATH,
                 Options.Values.DEBUG_PATH_STRESS,
                 Options.Values.DEBUG_CHAT_PARSER,
-                Options.Values.DEBUG_MANUAL_SOLVER
+                Options.Values.DEBUG_MANUAL_SOLVER,
+                Options.Values.DEBUG_CHAT_AND_MANUAL_SOLVER
             ],
             defaultValue = Options.Values.DEBUG_NONE
         )
@@ -148,29 +149,44 @@ class ArceuusLibrary : TreeScript() {
     }
 
 
-    private fun runSelectedDebugMode() {
+    fun runSelectedDebugMode() {
         when (config.debugMode) {
             DebugMode.NONE -> {
                 Logger.info("[Arceuus Library] MAIN | Debug mode disabled.")
+            }
+            DebugMode.COMPREHENSIVE_PATH_DEBUG -> {
+                Logger.info("[Arceuus Library] DEBUG | Running comprehensive path debug mode…")
+                ComprehensivePathDebug.runLive()
             }
             DebugMode.PATH_STRESS_TEST -> {
                 Logger.info("[Arceuus Library] DEBUG | Running path stress test debug mode…")
                 // Requires you to start inside the library (any floor).
                 PathStressTest.runLiveStress(hops = 30)
             }
-            DebugMode.COMPREHENSIVE_PATH_DEBUG -> {
-                Logger.info("[Arceuus Library] DEBUG | Running comprehensive path debug mode…")
-                ComprehensivePathDebug.runLive()
-            }
             DebugMode.CHAT_PARSER_DEBUG -> {
-                Logger.info("[Arceuus Library] DEBUG | Chat parser debug mode active. Script will not move or click; only logs parsed chat/server events.")
+                Logger.info(
+                    "[Arceuus Library] DEBUG | Chat parser debug active. " +
+                            "Script will not move or click; only logs parsed chat/server events."
+                )
             }
             DebugMode.MANUAL_SOLVER_DEBUG -> {
-                Logger.info("[Arceuus Library] DEBUG | Manual solver debug mode active. No movement/clicking; solver updates from your actions.")
+                Logger.info(
+                    "[Arceuus Library] DEBUG | Manual solver debug active. " +
+                            "No movement/clicking; solver updates from your actions."
+                )
                 debugController.resetManualSolver("entered manual solver debug")
+            }
+            DebugMode.CHAT_AND_MANUAL_SOLVER_DEBUG -> {
+                Logger.info(
+                    "[Arceuus Library] DEBUG | Chat parser + manual solver debug active. " +
+                            "Script will not move or click; logs parsed chat/server events " +
+                            "and updates the solver based on your manual clicks."
+                )
+                debugController.resetManualSolver("entered chat+manual solver debug")
             }
         }
     }
+
 
     private fun stopIfReachedTargetLevel(): Boolean {
         val target = config.stopAtLevel
@@ -187,7 +203,8 @@ class ArceuusLibrary : TreeScript() {
 
     override fun poll() {
         if (config.debugMode == DebugMode.CHAT_PARSER_DEBUG ||
-            config.debugMode == DebugMode.MANUAL_SOLVER_DEBUG
+            config.debugMode == DebugMode.MANUAL_SOLVER_DEBUG ||
+            config.debugMode == DebugMode.CHAT_AND_MANUAL_SOLVER_DEBUG
         ) {
             // Only watch chat & server messages, no clicks or movement.
             debugController.tickChatDebug()
@@ -199,6 +216,10 @@ class ArceuusLibrary : TreeScript() {
     }
 
     override fun onStop() {
+        PathStressTest.cancel()
         Logger.info("[Arceuus Library] MAIN | Arceuus Library script has stopped.")
+        super.onStop()
+
     }
+
 }

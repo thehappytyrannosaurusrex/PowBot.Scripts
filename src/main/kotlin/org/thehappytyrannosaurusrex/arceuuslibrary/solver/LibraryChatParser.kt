@@ -2,8 +2,14 @@ package org.thehappytyrannosaurusrex.arceuuslibrary.solver
 
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.thehappytyrannosaurusrex.api.chat.ChatTextUtils
+import org.thehappytyrannosaurusrex.api.chat.ChatSource
 
 object LibraryChatParser {
+
+    // -------------------------------------------------------------------------
+    // Public entry point
+    // -------------------------------------------------------------------------
 
     // Public entry point. You pass the raw message and where it came from.
     fun parse(message: String?, source: ChatSource): LibraryChatEvent? {
@@ -23,8 +29,11 @@ object LibraryChatParser {
     private fun parseServerMessage(message: String): LibraryChatEvent? {
         val lower = message.lowercase()
 
-        if ("you don’t find anything useful here" in lower ||
-            "you don't find anything useful here" in lower
+        // "You don't find anything useful here."
+        // Handle both straight and curly apostrophes just in case.
+        if (
+            "you don't find anything useful here" in lower ||
+            "you don’t find anything useful here" in lower
         ) {
             return LibraryChatEvent.ShelfEmpty
         }
@@ -39,16 +48,22 @@ object LibraryChatParser {
         return null
     }
 
+
     // -------------------------------------------------------------------------
     // CHAT MESSAGES (Chat box)
     // -------------------------------------------------------------------------
 
     private fun parseChatMessage(message: String): LibraryChatEvent? {
+        // Keep shelf detection exactly as before.
         parseShelfBookFound(message)?.let { return it }
+
+        // NPC request (with book title).
         parseCustomerRequest(message)?.let { return it }
-        parsePlayerReply(message)?.let { return it }
+
+        // NPC meta-dialogue: busy / reward / recently helped.
         parseNpcMetaDialogue(message)?.let { return it }
 
+        // We no longer care about player dialogue (player replies).
         return null
     }
 
@@ -101,23 +116,53 @@ object LibraryChatParser {
         return LibraryChatEvent.ShelfBookFound(book, titleSegment)
     }
 
+    // -------------------------------------------------------------------------
+    // NPC dialogue
+    // -------------------------------------------------------------------------
 
+    // NPC request dialogue prefixes (normalised, lower-case, ASCII quotes).
+    private val REQUEST_PREFIXES = listOf(
+        "i'm looking for:",
+        "i think i'd like to read:",
+        "have you found my book yet?",
+        "have you found my book, human?",
+        "you are very kind. please find:",
+        "do you have the book i require, traveller?",
+        // Just in case of US spelling:
+        "do you have the book i require, traveler?"
+    )
+
+    // Dialogue of NPC when we already have a request from another NPC.
+    private val OTHER_CUSTOMER_LINES = listOf(
+        "i'll grab you later when you're not busy helping someone else.",
+        "i believe you are currently assisting another customer of this library. i shall not trouble you with my needs at this time.",
+        "aren't you helping someone else at the moment? don't let me interrupt."
+    )
+
+    // Dialogue when we’re about to receive Book of Arcane Knowledge / token.
+    private val REWARD_LINES = listOf(
+        "well, isn't that handy? thanks, human! you can have this other book that i don't want.",
+        "that's handy, thanks, i'll get on with reading it. meanwhile, you can have this other book of mine - i won't be wanting to read it again.",
+        "thanks, human. you can have this other book i don't want.",
+        "thank you very much. in return, please accept a token of my thanks.",
+        "what a marvellous coincidence. thank you very much, traveller. in return, please accept a token of my thanks.",
+        "thanks, i'll get on with reading it. meanwhile you can have this other book of mine - i won't be wanting to read it again."
+    )
+
+    // Dialogue when we just recently fulfilled a request for them.
+    private val RECENTLY_HELPED_LINES = listOf(
+        "thank you for finding my book. it is most interesting.",
+        "thanks for finding the book. i'll have to think up what i need next.",
+        "thanks for finding my book. i'm learning such a lot here."
+    )
 
     // NPC request lines with coloured, quoted titles.
     private fun parseCustomerRequest(message: String): LibraryChatEvent? {
-        val lower = message.lowercase()
+        val norm = ChatTextUtils.normaliseNpcText(message)
 
-        val looksLikeRequest = listOf(
-            "i’m looking for:",
-            "i'm looking for:",
-            "i think i’d like to read:",
-            "i think i'd like to read:",
-            "have you found my book yet?",
-            "have you found my book, human?",
-            "you are very kind. please find:",
-            "do you have the book i require, traveller?",
-            "do you have the book i require, traveler?"
-        ).any { lower.contains(it) }
+        val looksLikeRequest = REQUEST_PREFIXES.any { prefix ->
+            norm.startsWith(prefix)
+        }
 
         if (!looksLikeRequest) return null
 
@@ -142,72 +187,26 @@ object LibraryChatParser {
         )
     }
 
-    // Player replies after a request.
-    private fun parsePlayerReply(message: String): LibraryChatEvent? {
-        val lower = message.lowercase()
-
-        // Already have the requested book.
-        if (lower.contains("i just happen to have a copy with me")) {
-            return LibraryChatEvent.PlayerReplyToRequest(
-                LibraryChatEvent.PlayerReplyKind.HAS_BOOK_NOW
-            )
-        }
-
-        // Accepted request but doesn't have it yet.
-        if (lower.contains("i’ll see what i can do") ||
-            lower.contains("i'll see what i can do")
-        ) {
-            return LibraryChatEvent.PlayerReplyToRequest(
-                LibraryChatEvent.PlayerReplyKind.ACCEPTED_REQUEST
-            )
-        }
-
-        // Explicitly saying we don't have it yet.
-        if (lower.contains("not yet, sorry")) {
-            return LibraryChatEvent.PlayerReplyToRequest(
-                LibraryChatEvent.PlayerReplyKind.NO_BOOK_YET
-            )
-        }
-
-        return null
-    }
-
     // NPC meta dialogue: busy / reward / recently helped.
     private fun parseNpcMetaDialogue(message: String): LibraryChatEvent? {
-        val lower = message.lowercase()
+        val norm = ChatTextUtils.normaliseNpcText(message)
 
         // Busy / already helping someone else.
-        if (lower.contains("i’ll grab you later when you’re not busy helping someone else") ||
-            lower.contains("i'll grab you later when you're not busy helping someone else") ||
-            lower.contains("aren’t you helping someone else at the moment") ||
-            lower.contains("aren't you helping someone else at the moment") ||
-            lower.contains("i believe you are currently assisting") ||
-            lower.contains("i believe you are currently assisting")
-        ) {
+        if (OTHER_CUSTOMER_LINES.any { line -> norm.startsWith(line) }) {
             return LibraryChatEvent.NpcMetaDialogue(
                 LibraryChatEvent.NpcMetaKind.BUSY_WITH_OTHER_CUSTOMER
             )
         }
 
         // Reward / token of thanks / BoAK.
-        if (lower.contains("you can have this other book i don’t want") ||
-            lower.contains("you can have this other book i don't want") ||
-            lower.contains("you can have this other book of mine - i won’t be wanting to read it again") ||
-            lower.contains("you can have this other book of mine - i won't be wanting to read it again") ||
-            lower.contains("please accept a token of my thanks")
-        ) {
+        if (REWARD_LINES.any { line -> norm.startsWith(line) }) {
             return LibraryChatEvent.NpcMetaDialogue(
                 LibraryChatEvent.NpcMetaKind.REWARD_TOKEN
             )
         }
 
         // Recently helped / can't help twice in a row.
-        if (lower.contains("thank you for finding my book. it is most interesting") ||
-            lower.contains("thanks for finding the book. i’ll have to think up what i need next") ||
-            lower.contains("thanks for finding the book. i'll have to think up what i need next") ||
-            lower.contains("thanks for finding my book. i’m learning such a lot here") ||
-            lower.contains("thanks for finding my book. i'm learning such a lot here")
-        ) {
+        if (RECENTLY_HELPED_LINES.any { line -> norm.startsWith(line) }) {
             return LibraryChatEvent.NpcMetaDialogue(
                 LibraryChatEvent.NpcMetaKind.RECENTLY_HELPED_ALREADY
             )
@@ -220,12 +219,42 @@ object LibraryChatParser {
     // Helpers
     // -------------------------------------------------------------------------
 
-    // First thing between quotes ("..." or '...').
-    // Works with colour tags inside, e.g.
-    // "I'm looking for:'<col=0000ff>The Journey of Rada, by Griselle</col>'."
+        /**
+     * First thing between quotes ("..." or '...').
+     *
+     * Works with colour tags inside, e.g.
+     * "I'm looking for:'<col=0000ff>The Journey of Rada, by Griselle</col>'."
+     *
+     * Also strips <col> tags and <br> tags so that what we hand to Books.fromRequestedTitle
+     * looks like a normal human-readable title.
+     */
+// First thing between quotes ("..." or '...') OR the inner part of the first <col=...>...</col>.
+// In practice, NPC book requests always colour the book title blue, so we first try to grab the
+// text inside the colour tag. This avoids being confused by apostrophes in words like "I'd".
+//
+// Examples:
+//   "I think I'd like to read:<br>'<col=0000ff>The Parable of the Wintertodt, by Anonymous.</col>'"
+//   "I'm looking for:'<col=0000ff>The Journey of Rada, by Griselle</col>'."
     private fun extractQuotedTitle(message: String): String? {
-        val pattern = Regex("[\"“']([^\"”']+)[\"”']")
-        val match = pattern.find(message) ?: return null
-        return match.groupValues.getOrNull(1)?.trim()
+    // 1) Prefer the text inside the first <col=...>...</col> block.
+    val colRegex = Regex(
+        pattern = """(?i)<\s*col\s*=\s*[^>]+>(.*?)</\s*col\s*>""",
+        options = setOf(RegexOption.DOT_MATCHES_ALL)
+    )
+    val colMatch = colRegex.find(message)
+    if (colMatch != null) {
+        val inner = colMatch.groupValues.getOrNull(1)?.trim().orEmpty()
+        if (inner.isNotEmpty()) {
+            // Normalise any <br> tags to spaces so titles match our static definitions.
+            return ChatTextUtils.replaceBreakTagsWithSpaces(inner).trim()
+        }
     }
+
+    // 2) Fallback: use the last quoted segment in the line. We deliberately use the LAST
+    //    match so that apostrophes in words like "I'm" / "I'd" don't get mistaken for
+    //    quote delimiters around the title.
+    val inner = ChatTextUtils.extractLastQuotedSegment(message) ?: return null
+    return inner
+}
+
 }
