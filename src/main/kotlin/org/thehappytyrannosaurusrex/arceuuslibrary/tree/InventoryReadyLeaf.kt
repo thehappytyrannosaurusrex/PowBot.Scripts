@@ -16,6 +16,7 @@ import org.powbot.dax.api.DaxWalker
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.api.utils.Logger
 import kotlin.random.Random
+import org.thehappytyrannosaurusrex.api.utils.ScriptUtils
 
 class InventoryReadyLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Setup & travel") {
@@ -44,23 +45,12 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
             STAMINA1_NAME, STAMINA2_NAME, STAMINA3_NAME, STAMINA4_NAME
         )
 
-        // movement-based failsafe (short & strict)
-        private const val NO_PROGRESS_WINDOW_MS = 6_000L
-        private const val REQUIRED_PROGRESS_TILES = 3.0          // must shrink distance by >= 3 tiles
-        private const val MAX_NO_PROGRESS_TRIES = 5              // before Dax
-        private const val MAX_NO_PROGRESS_AFTER_DAX = 3          // then stop
     }
 
     private var loggedReadyInsideLibrary = false
     private var initialStaminaCheckDone = false
 
-    // ---- movement watchdog (library) ----
-    private var lastProgressAt: Long = 0L
-    private var lastDistance: Double? = null
-    private var noProgressTries: Int = 0
-    private var daxUsedOnce: Boolean = false
-
-    // -------- Banking travel --------
+        // -------- Banking travel --------
     private fun moveToBank() {
         val local = Players.local()
         if (!local.valid()) {
@@ -83,16 +73,13 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
         }
     }
 
-    // -------- Error helper --------
-    private fun stopWithError(message: String): Boolean {
-        Logger.error(message)
-        val delay = Random.nextInt(1000, 3001)
-        Condition.sleep(delay)
-        script.controller.stop()
-        return false
-    }
+        // -------- Error helper --------
+private fun stopWithError(message: String): Boolean {
+    ScriptUtils.stopWithError(script, message)
+    return false
+}
 
-    // -------- Graceful handling --------
+// -------- Graceful handling --------
 
     private fun hasFullGracefulEquipped(): Boolean =
         GRACEFUL_PIECES.all { pieceName ->
@@ -242,53 +229,7 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
         return false
     }
 
-    // -------- Travel to Arceuus Library (distance-progress failsafe) --------
-    private fun updateProgressAndMaybeFail(distNow: Double) {
-        val now = System.currentTimeMillis()
-        val prev = lastDistance
-
-        if (prev == null) {
-            lastDistance = distNow
-            lastProgressAt = now
-            noProgressTries = 0
-            return
-        }
-
-        val shrink = prev - distNow
-        val windowElapsed = now - lastProgressAt >= NO_PROGRESS_WINDOW_MS
-
-        if (shrink >= REQUIRED_PROGRESS_TILES) {
-            // made meaningful progress
-            lastDistance = distNow
-            lastProgressAt = now
-            if (noProgressTries > 0) {
-                Logger.info("[Arceuus Library] LOGIC | Distance decreased by ${"%.1f".format(shrink)} tiles (now=${"%.1f".format(distNow)}). Resetting attempts.")
-            }
-            noProgressTries = 0
-            return
-        }
-
-        if (windowElapsed) {
-            noProgressTries++
-            Logger.info("[Arceuus Library] LOGIC | Library no-progress attempt $noProgressTries/${if (!daxUsedOnce) MAX_NO_PROGRESS_TRIES else MAX_NO_PROGRESS_AFTER_DAX} " +
-                        "(dist=${"%.1f".format(prev)}→${"%.1f".format(distNow)} in ~${NO_PROGRESS_WINDOW_MS/1000}s; need ≥${"%.0f".format(REQUIRED_PROGRESS_TILES)})."
-            )
-            lastDistance = distNow
-            lastProgressAt = now
-
-            if (!daxUsedOnce && noProgressTries >= MAX_NO_PROGRESS_TRIES) {
-                daxUsedOnce = true
-                noProgressTries = 0
-                Logger.info("[Arceuus Library] LOGIC | Max no-progress windows hit; trying DaxWalker.walkTo($LIBRARY_TILE).")
-                val ok = try { DaxWalker.walkTo(LIBRARY_TILE) } catch (_: Exception) { false }
-                if (!ok) {
-                    stopWithError("[Travel:FailSafe] DaxWalker failed to start path to Library. Stopping.")
-                }
-            } else if (daxUsedOnce && noProgressTries >= MAX_NO_PROGRESS_AFTER_DAX) {
-                stopWithError("[Travel:FailSafe] Still no distance progress after Dax escalation. Stopping.")
-            }
-        }
-    }
+    // -------- Travel to Arceuus Library --------
 
     private fun travelToLibrary(): Boolean {
         val local = Players.local()
@@ -296,30 +237,23 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
         val here = local.tile()
 
         // Only consider travel "finished" when we're near the anchor library tile.
-            if (here.floor == LIBRARY_TILE.floor && here.distanceTo(LIBRARY_TILE) <= 3.0) {
+        if (here.floor == LIBRARY_TILE.floor && here.distanceTo(LIBRARY_TILE) <= 3.0) {
             if (!loggedReadyInsideLibrary) {
                 Logger.info("[Arceuus Library] LOGIC | Arrived at ground-floor library anchor $LIBRARY_TILE.")
                 loggedReadyInsideLibrary = true
             }
-            lastDistance = 0.0
-            lastProgressAt = System.currentTimeMillis()
-            noProgressTries = 0
-            daxUsedOnce = false
             return true
         }
         loggedReadyInsideLibrary = false
 
-        // Calculate distance and update failsafe BEFORE we issue new steps (so taps don't mask being stuck)
         val dist = here.distanceTo(LIBRARY_TILE)
-        updateProgressAndMaybeFail(dist)
-
         Logger.info("[Arceuus Library] LOGIC | Close to Library (dist=${"%.1f".format(dist)}); walkTo($LIBRARY_TILE).")
         Movement.moveTo(LIBRARY_TILE)
 
         return false
     }
 
-    // -------- Main tick --------
+// -------- Main tick --------
     override fun execute() {
 
         // Graceful & stamina setup first

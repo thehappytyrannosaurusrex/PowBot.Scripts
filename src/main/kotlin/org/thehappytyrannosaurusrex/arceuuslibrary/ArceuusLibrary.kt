@@ -23,6 +23,7 @@ import org.thehappytyrannosaurusrex.api.ui.ViewportUi
 import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.powbot.api.event.MessageEvent
 import com.google.common.eventbus.Subscribe
+import org.thehappytyrannosaurusrex.api.utils.ScriptUtils
 
 @ScriptManifest(
     name = "Arceuus Library",
@@ -194,8 +195,9 @@ class ArceuusLibrary : TreeScript() {
 
         val current = Skills.realLevel(config.trackedSkillId)
         if (current >= target) {
-            Logger.info("[Arceuus Library] MAIN | ${config.xpType.label.uppercase()} reached target level $target.")
-            controller.stop()
+            ScriptUtils.stopWithInfo(this,
+                "[Arceuus Library] MAIN | ${config.xpType.label.uppercase()} reached target level $target."
+            )
             return true
         }
         return false

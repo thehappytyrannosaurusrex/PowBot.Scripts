@@ -216,26 +216,15 @@ object LibraryChatParser {
     }
 
     // -------------------------------------------------------------------------
-    // Helpers
     // -------------------------------------------------------------------------
+// Helpers
+// -------------------------------------------------------------------------
 
-        /**
-     * First thing between quotes ("..." or '...').
-     *
-     * Works with colour tags inside, e.g.
-     * "I'm looking for:'<col=0000ff>The Journey of Rada, by Griselle</col>'."
-     *
-     * Also strips <col> tags and <br> tags so that what we hand to Books.fromRequestedTitle
-     * looks like a normal human-readable title.
-     */
-// First thing between quotes ("..." or '...') OR the inner part of the first <col=...>...</col>.
-// In practice, NPC book requests always colour the book title blue, so we first try to grab the
-// text inside the colour tag. This avoids being confused by apostrophes in words like "I'd".
-//
-// Examples:
-//   "I think I'd like to read:<br>'<col=0000ff>The Parable of the Wintertodt, by Anonymous.</col>'"
-//   "I'm looking for:'<col=0000ff>The Journey of Rada, by Griselle</col>'."
-    private fun extractQuotedTitle(message: String): String? {
+/**
+ * Extract the book title from NPC dialogue lines that include titles either in
+ * coloured <col=...> spans or quoted strings.
+ */
+private fun extractQuotedTitle(message: String): String? {
     // 1) Prefer the text inside the first <col=...>...</col> block.
     val colRegex = Regex(
         pattern = """(?i)<\s*col\s*=\s*[^>]+>(.*?)</\s*col\s*>""",

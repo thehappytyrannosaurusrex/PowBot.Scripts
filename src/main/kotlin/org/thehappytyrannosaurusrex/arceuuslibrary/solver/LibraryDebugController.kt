@@ -216,7 +216,6 @@ class LibraryDebugController(
             val area = shelf.area
             val floor = Locations.floorName(shelf.floor).uppercase()
 
-
             val bookLabel = if (known != null) {
                 observedCount++
                 "[${known.name}]"
