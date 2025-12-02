@@ -1,41 +1,35 @@
-/*
- * Project: Arceuus Library Script (PowBot)
- * File: InventoryReadyLeaf.kt
- * Purpose: Added review header and standardized logging to Logger.info.
- * Notes: Generated comments + logging normalization on 2025-11-12.
- */
+/* Project: Arceuus Library Script (PowBot) */
 
 package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
 import org.powbot.api.Condition
-import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.api.script.tree.Leaf
 import org.powbot.dax.api.models.RunescapeBank
 import org.powbot.dax.api.DaxWalker
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
 import org.thehappytyrannosaurusrex.api.utils.Logger
 import kotlin.random.Random
 import org.thehappytyrannosaurusrex.api.utils.ScriptUtils
+
 
 class InventoryReadyLeaf(script: ArceuusLibrary) :
     Leaf<ArceuusLibrary>(script, "Setup & travel") {
 
     companion object {
-        private val ARCEUUS_BANK_TILE = Tile(1629, 3746, 0)
-        private val LIBRARY_TILE = Tile(1632, 3804, 0)
 
         private val GRACEFUL_PIECES = listOf(
             "Graceful hood", "Graceful top", "Graceful legs",
             "Graceful gloves", "Graceful boots", "Graceful cape"
         )
 
-        // stamina stocking goals
+        // Stamina stocking goals
         private const val TARGET_STAMINA_DOSES = 16
         private const val MIN_STARTUP_STAMINA_DOSES = 8
         private const val MAX_STAMINA_ITEMS = 6
 
-        // stamina names
+        // Stamina names
         private const val STAMINA1_NAME = "Stamina potion(1)"
         private const val STAMINA2_NAME = "Stamina potion(2)"
         private const val STAMINA3_NAME = "Stamina potion(3)"
@@ -51,27 +45,38 @@ class InventoryReadyLeaf(script: ArceuusLibrary) :
     private var initialStaminaCheckDone = false
 
         // -------- Banking travel --------
-    private fun moveToBank() {
-        val local = Players.local()
-        if (!local.valid()) {
-            Logger.info("[Arceuus Library] LOGIC | Local player invalid, using generic moveToBank().")
-            Movement.moveToBank()
-            return
+        private fun moveToBank() {
+            val local = Players.local()
+
+            if (!local.valid()) {
+                Logger.info("[Arceuus Library] LOGIC | Local player invalid, using generic moveToBank().")
+                Movement.moveToBank()
+                return
+            }
+
+            val distToArceuus = local.tile().distanceTo(Locations.ARCEUUS_BANK_TILE)
+            if (distToArceuus < 50.0) {
+                Logger.info(
+                    "[Arceuus Library] LOGIC | ~${"%.1f".format(distToArceuus)} tiles to Arceuus bank; " +
+                            "try moveToBank(ARCEUUS)."
+                )
+                Movement.moveToBank(RunescapeBank.ARCEUUS)
+                if (!Bank.present()) {
+                    Logger.info(
+                        "[Arceuus Library] LOGIC | Arceuus bank not present; " +
+                                "fallback step(${Locations.ARCEUUS_BANK_TILE})."
+                    )
+                    Movement.step(Locations.ARCEUUS_BANK_TILE)
+                }
+            } else {
+                Logger.info(
+                    "[Arceuus Library] LOGIC | Far from Arceuus bank " +
+                            "(dist=${"%.1f".format(distToArceuus)}); generic moveToBank()."
+                )
+                Movement.moveToBank()
+            }
         }
 
-        val distToArceuus = local.tile().distanceTo(ARCEUUS_BANK_TILE)
-        if (distToArceuus < 50.0) {
-            Logger.info("[Arceuus Library] LOGIC | ~${"%.1f".format(distToArceuus)} tiles to Arceuus bank; try moveToBank(ARCEUUS).")
-            Movement.moveToBank(RunescapeBank.ARCEUUS)
-            if (!Bank.present()) {
-                Logger.info("[Arceuus Library] LOGIC | Arceuus bank not present; fallback step($ARCEUUS_BANK_TILE).")
-                Movement.step(ARCEUUS_BANK_TILE)
-            }
-        } else {
-            Logger.info("[Arceuus Library] LOGIC | Far from Arceuus (dist=${"%.1f".format(distToArceuus)}); generic moveToBank().")
-            Movement.moveToBank()
-        }
-    }
 
         // -------- Error helper --------
 private fun stopWithError(message: String): Boolean {
@@ -125,7 +130,7 @@ private fun stopWithError(message: String): Boolean {
         return !withdrewAny
     }
 
-    private fun ensureGraceful(): Boolean {
+    fun ensureGraceful(): Boolean {
         if (!script.shouldUseGraceful()) return true
         if (hasFullGracefulEquipped()) return true
         if (equipGracefulFromInventory()) return false
@@ -156,7 +161,7 @@ private fun stopWithError(message: String): Boolean {
         return total
     }
 
-    private fun ensureStamina(): Boolean {
+    fun ensureStamina(): Boolean {
         if (!script.shouldUseStamina()) return true
 
         val current = currentStaminaDoses()
@@ -205,7 +210,7 @@ private fun stopWithError(message: String): Boolean {
         return false
     }
 
-    private fun maybeUseStaminaAndRestock(): Boolean {
+    fun maybeUseStaminaAndRestock(): Boolean {
         if (!script.shouldUseStamina()) return false
         val energy = Movement.energyLevel()
         val doses = currentStaminaDoses()
@@ -236,22 +241,31 @@ private fun stopWithError(message: String): Boolean {
         if (!local.valid()) return false
         val here = local.tile()
 
-        // Only consider travel "finished" when we're near the anchor library tile.
-        if (here.floor == LIBRARY_TILE.floor && here.distanceTo(LIBRARY_TILE) <= 3.0) {
+        // Only consider travel "finished" when 're near the anchor library tile.
+        if (here.floor == Locations.LIBRARY_TILE.floor &&
+            here.distanceTo(Locations.LIBRARY_TILE) <= 3.0
+        ) {
             if (!loggedReadyInsideLibrary) {
-                Logger.info("[Arceuus Library] LOGIC | Arrived at ground-floor library anchor $LIBRARY_TILE.")
+                Logger.info(
+                    "[Arceuus Library] LOGIC | Arrived at ground-floor library anchor " +
+                            "${Locations.LIBRARY_TILE}."
+                )
                 loggedReadyInsideLibrary = true
             }
             return true
         }
         loggedReadyInsideLibrary = false
 
-        val dist = here.distanceTo(LIBRARY_TILE)
-        Logger.info("[Arceuus Library] LOGIC | Close to Library (dist=${"%.1f".format(dist)}); walkTo($LIBRARY_TILE).")
-        Movement.moveTo(LIBRARY_TILE)
+        val dist = here.distanceTo(Locations.LIBRARY_TILE)
+        Logger.info(
+            "[Arceuus Library] LOGIC | Close to Library " +
+                    "(dist=${"%.1f".format(dist)}); walkTo(${Locations.LIBRARY_TILE})."
+        )
+        Movement.moveTo(Locations.LIBRARY_TILE)
 
         return false
     }
+
 
 // -------- Main tick --------
     override fun execute() {

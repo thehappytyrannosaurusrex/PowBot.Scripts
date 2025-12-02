@@ -4,16 +4,12 @@ import org.powbot.api.rt4.Inventory
 
 /**
  * Helpers for checking whether the current inventory contains items that
- * are *not* part of an allow-list.
  */
 object InventorySanity {
 
     /**
-     * Returns true if the inventory contains any item that is not allowed.
-     *
-     * @param allowedItemIds Item IDs that are always allowed.
-     * @param allowedByName  Predicates that mark items as allowed by name.
-     */
+ * Returns true if the inventory contains any item that is not allowed.
+ */
     fun hasNonAllowedItems(
         allowedItemIds: Set<Int> = emptySet(),
         allowedByName: List<(String) -> Boolean> = emptyList()

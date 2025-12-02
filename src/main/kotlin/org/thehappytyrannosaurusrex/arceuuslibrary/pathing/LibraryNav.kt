@@ -29,17 +29,17 @@ object LibraryNav {
     var testWalkableOverride: ((Tile) -> Boolean)? = null
 
     fun isWalkable(tile: Tile): Boolean {
-        // Test/debug hook: lets us bypass collision in tests or while debugging.
+        // Test/debug hook: lets bypass collision in tests or while debugging.
         testWalkableOverride?.let { override ->
             return override(tile)
         }
 
-        // Hard bound: only ever walk inside our library definition
+        // Hard bound: only ever walk inside library definition
         if (!inLibrary(tile)) return false
 
         val cm: CollisionMap = Movement.collisionMap(tile.floor)
 
-        // In your build this returns a 2D accessor you can index as flags2D[x][y].
+        // In build returns a 2D accessor can index as flags2D[x][y].
         val flags2D = cm.flags()
 
         val localX = tile.localX()

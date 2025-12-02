@@ -1,9 +1,4 @@
-/*
- * Project: Arceuus Library Script (PowBot)
- * File: Stairs.kt
- * Purpose: Added review header and standardized logging to Logger.info.
- * Notes: Generated comments + logging normalization on 2025-11-12.
- */
+/* Project: Arceuus Library Script (PowBot) */
 
 package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
@@ -13,7 +8,7 @@ import kotlin.math.max
 import kotlin.math.min
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations.Area
 
-// ===== Directional stair IDs (keep your existing sets) =====
+// ===== Directional stair IDs (keep existing sets) =====
 private val UP_GROUND_TO_FIRST    = intArrayOf(27853, 27854)
 private val DOWN_FIRST_TO_GROUND  = intArrayOf(27855, 27856)
 private val UP_FIRST_TO_SECOND    = intArrayOf(27851)
@@ -41,7 +36,7 @@ data class StairSpec(
     val stairIds: IntArray
 )
 
-// ---------- Your rectangles wired into specs (unchanged semantics) ----------
+// ---------- rectangles wired into specs (unchanged semantics) ----------
 private val INTERNAL_SPECS: List<StairSpec> = listOf(
     // NW
     StairSpec("NW Ground→First", Area.NORTHWEST, 0, 1, Rect(1614, 3828, 1616, 3825, 0), UP_GROUND_TO_FIRST),

@@ -52,7 +52,7 @@ class InventorySanityBranch(script: ArceuusLibrary) :
 
     override fun validate(): Boolean {
         val hasNonAllowedItems = InventorySanity.hasNonAllowedItems(
-            allowedItemIds = bookItemIds,
+            allowedItemIds = bookItemIds, 
             allowedByName = listOf<(String) -> Boolean>(
                 ::isGraceful,
                 ::isStaminaPotion,

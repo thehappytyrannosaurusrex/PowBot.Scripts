@@ -1,9 +1,4 @@
-/*
- * Project: Arceuus Library Script (PowBot)
- * File: Timer.kt
- * Purpose: Added review header and standardized logging to Logger.info.
- * Notes: Generated comments + logging normalization on 2025-11-12.
- */
+/* Project: Arceuus Library Script (PowBot) */
 
 package org.thehappytyrannosaurusrex.api.utils
 import org.thehappytyrannosaurusrex.api.utils.Logger

@@ -42,7 +42,7 @@ object LibraryPathfinder {
         // Open set: frontier of nodes to explore, ordered by f = g + h
         val open = java.util.PriorityQueue<Node>(compareBy<Node> { it.f }.thenBy { it.h })
 
-        // Closed set: nodes we've fully explored
+        // Closed set: nodes 've fully explored
         val closed = mutableSetOf<NavTile>()
 
         // Best known cost from start to each node
@@ -87,7 +87,7 @@ object LibraryPathfinder {
                     continue
                 }
 
-                // This path to neighbour is better than any previous one.
+                // Path to neighbour is better than any previous one.
                 cameFrom[neighbour] = current
                 gScore[neighbour] = tentativeG
 

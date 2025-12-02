@@ -7,25 +7,25 @@ import org.thehappytyrannosaurusrex.api.chat.ChatSource
 // All interesting chat / server events related to the Arceuus Library.
 sealed class LibraryChatEvent {
 
-    // You searched a shelf and found a specific book.
+    // Searched a shelf and found a specific book.
     data class ShelfBookFound(
         val book: Books,
         val rawTitle: String
     ) : LibraryChatEvent()
 
-    // You searched a shelf and found nothing useful.
+    // Searched a shelf and found nothing useful.
     object ShelfEmpty : LibraryChatEvent()
 
     // Layout reset (books shuffled).
     object LayoutReset : LibraryChatEvent()
 
-    // NPC asks / reminds you about a specific book.
+    // NPC asks / reminds about a specific book.
     data class CustomerRequested(
         val rawTitle: String,
         val book: Books?      // null when we couldn't resolve the title.
     ) : LibraryChatEvent()
 
-    // Player reply kinds kept for potential future use, but we no longer emit
+    // Player reply kinds kept for potential future use, but no longer emit
     // PlayerReplyToRequest events from the parser.
     enum class PlayerReplyKind {
         ACCEPTED_REQUEST,   // "I'll see what I can do."

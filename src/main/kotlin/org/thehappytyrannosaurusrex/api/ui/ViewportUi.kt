@@ -1,8 +1,8 @@
 package org.thehappytyrannosaurusrex.api.ui
 
-import org.powbot.api.rt4.Components
+import org.powbot.api.Condition
 import org.powbot.api.rt4.Game
-import org.powbot.api.rt4.Widget
+import org.thehappytyrannosaurusrex.api.data.WidgetIds
 import org.powbot.api.rt4.Widgets
 import org.thehappytyrannosaurusrex.api.utils.Logger
 
@@ -15,17 +15,26 @@ class ViewportUi {
     }
 
     /**
-     * Returns true if the main chatbox is expanded (the row with All/Game/Public is visible),
-     * false if the chatbox has been collapsed/hidden by the user.
-     */
-    private fun isChatBoxExpanded(): Boolean {
-        val chatWidget = Widgets.widget(162)
-        if (!chatWidget.valid()) {
-            return false
+ * Ensure the main inventory tab is open.
+ */
+    fun ensureInventoryOpen() {
+        if (Game.tab() == Game.Tab.INVENTORY) {
+            return
         }
 
-        // Component(1) is the top row (All / Game / Public / etc)
-        val header = chatWidget.component(1)
+        Game.tab(Game.Tab.INVENTORY)
+        Condition.wait(
+            { Game.tab() == Game.Tab.INVENTORY },
+            200,
+            10
+        )
+    }
+
+    /**
+ * Returns true if the main chatbox is expanded (the row with All/Game/Public is visible),
+ */
+    private fun isChatBoxExpanded(): Boolean {
+        val header = WidgetIds.Chatbox.HEADER.component()
         if (!header.valid()) {
             return false
         }
@@ -33,16 +42,12 @@ class ViewportUi {
         return header.visible()
     }
 
-    /**
-     * Returns true if the inventory overlay (widget 149, component 0) is visible.
-     */
-    private fun isInventoryOverlayOpen(): Boolean {
-        val inventoryWidget = Widgets.widget(149)
-        if (!inventoryWidget.valid()) {
-            return false
-        }
 
-        val root = inventoryWidget.component(0)
+    /**
+ * Returns true if the inventory overlay (resizable side-pane) is visible.
+ */
+    private fun isInventoryOverlayOpen(): Boolean {
+        val root = WidgetIds.InventoryResizable.ROOT.component()
         if (!root.valid()) {
             return false
         }
@@ -51,21 +56,15 @@ class ViewportUi {
     }
 
     /**
-     * Closes the resizable inventory overlay if it's currently open.
-     *
-     * On some layouts this isn't handled by Game.closeOpenTab(), so we tap
-     * widget(149).component(0) directly.
-     */
+ * Closes the resizable inventory overlay if it's currently open.
+ */
     private fun closeInventoryOverlayIfOpen() {
         try {
             if (!isInventoryOverlayOpen()) {
                 return
             }
 
-            val inventoryWidget = Widgets.widget(149)
-            val root = inventoryWidget.component(0)
-
-            Logger.info("[Viewport] Closed side panel.")
+            Logger.info("[Viewport] Closing side panel via Game.closeOpenTab().")
             Game.closeOpenTab()
         } catch (e: Exception) {
             Logger.error("[Viewport] Failed to close side panel: ${e.message}")
@@ -87,18 +86,12 @@ class ViewportUi {
         try {
             // Only toggle if the chatbox is currently expanded.
             if (!isChatBoxExpanded()) {
-                // Already minimised; do nothing so we don't re-open it.
+                // Already minimised; do nothing so don't re-open it.
                 Logger.info("[Viewport] Chat box already minimised; skipping toggle.")
                 return
             }
 
-            // Widget 601 is the chatbox button group, component 46 is the toggle button
-            val widget = Widgets.widget(601)
-            if (!widget.valid()) {
-                return
-            }
-
-            val toggleComponent = widget.component(46)
+            val toggleComponent = WidgetIds.ToplevelButtons.CHAT_TOGGLE.component()
             if (!toggleComponent.valid()) {
                 return
             }
@@ -106,7 +99,11 @@ class ViewportUi {
             val actions = toggleComponent.actions()
             val hasToggleChat = actions.any { it.equals("Toggle chat", ignoreCase = true) }
 
-            Logger.info("[Viewport] Minimising chat box via widget(601).component(46).")
+            Logger.info(
+                "[Viewport] Minimising chat box via " +
+                        "widget(${WidgetIds.ToplevelButtons.CHAT_TOGGLE.group})." +
+                        "component(${WidgetIds.ToplevelButtons.CHAT_TOGGLE.path})."
+            )
 
             if (hasToggleChat) {
                 toggleComponent.click("Toggle chat")

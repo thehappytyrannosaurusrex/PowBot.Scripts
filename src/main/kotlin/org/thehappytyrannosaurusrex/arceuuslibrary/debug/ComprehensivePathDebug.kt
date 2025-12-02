@@ -137,7 +137,7 @@ object ComprehensivePathDebug {
 
             Logger.info("[Arceuus Library] DEBUG | Hop ${i + 1}/$totalHops: $from -> $to")
 
-            // Optional: still check our own A* connectivity for this hop
+            // Optional: still check own A* connectivity for hop
             val path = LibraryPathfinder.findPath(from, to)
             if (path == null) {
                 Logger.warn("[LivePath] Hop ${i + 1}: A* found no path $from -> $to")

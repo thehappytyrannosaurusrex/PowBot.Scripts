@@ -26,7 +26,7 @@ object LibraryWalker {
             val current = me.tile()
             val dist = current.distanceTo(target).toDouble()
 
-            // Already close enough: skip this step
+            // Already close enough: skip step
             if (dist <= 1.0) {
                 Logger.info("[Arceuus Library] PATHING | Step $index/$lastIndex – already near $target " +
                             "(dist=%.2f), skipping.".format(dist)
@@ -40,7 +40,7 @@ object LibraryWalker {
                 return false
             }
 
-            // Wait until we get close enough or timeout
+            // Wait until get close enough or timeout
             val attempts = maxStepTimeoutMs / 250
             val arrived = Condition.wait(
                 { Players.local().tile().distanceTo(target) <= 1 },

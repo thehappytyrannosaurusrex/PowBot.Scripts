@@ -4,21 +4,12 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 
 /**
  * Canonical Arceuus Library sequences, ported from the RuneLite Kourend Library solver.
- *
- * The game:
- * - Picks one of these 5 sequences
- * - Picks a starting bookcase index
- * - Places a book from the sequence into every Nth bookcase (N = step), wrapping around.
- *
- * Each sequence contains all 16 unique “layout books” exactly once.
  */
 object LibrarySequences {
 
     /**
-     * The five possible book sequences.
-     *
-     * Sequence index (0–4) corresponds to the original RuneLite implementation ordering.
-     */
+ * The five possible book sequences.
+ */
     val sequences: List<List<Books>> = listOf(
         // Sequence 1
         listOf(
@@ -122,9 +113,8 @@ object LibrarySequences {
     )
 
     /**
-     * Convenience set of all layout books that appear in any sequence.
-     * (Should be 16 elements.)
-     */
+ * Convenience set of all layout books that appear in any sequence.
+ */
     val allSequenceBooks: Set<Books> =
         sequences.flatten().toSet()
 }

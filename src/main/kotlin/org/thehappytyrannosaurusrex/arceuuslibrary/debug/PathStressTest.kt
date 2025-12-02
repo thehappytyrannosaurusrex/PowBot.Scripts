@@ -25,8 +25,8 @@ object PathStressTest {
     private var cancelRequested: Boolean = false
 
     /**
-     * Request that any running stress test stops as soon as it safely can.
-     */
+ * Request that any running stress test stops as soon as it safely can.
+ */
     fun cancel() {
         if (isRunning) {
             Logger.info("[StressPath] Cancel requested for running stress test.")
@@ -57,9 +57,9 @@ object PathStressTest {
             val rng = Random(System.currentTimeMillis())
 
             // Pre-build a pool of interesting targets:
-            //  - all shelf standing tiles
-            //  - central first floor
-            //  - NPC anchors
+            // - all shelf standing tiles
+            // - central first floor
+            // - NPC anchors
             val shelfTargets = Bookshelves.ALL.map { it.standingTile }
 
             val centralFirstFloor = Tile(1638, 3813, 1)
@@ -101,14 +101,14 @@ object PathStressTest {
 
                 val start = meNow.tile()
 
-                // Try to pick a target with some distance; avoid tiny hops right next to us.
+                // Try to pick a target with some distance; avoid tiny hops right next to .
                 val target = pickReasonableTarget(start, allTargets, rng)
 
                 hopsAttempted++
                 val humanIndex = hopIndex + 1
                 Logger.info("[Arceuus Library] DEBUG | Hop $humanIndex/$hops: $start -> $target")
 
-                // A* path for this hop (for diagnostics & stats)
+                // A* path for hop (for diagnostics & stats)
                 val path = LibraryPathfinder.findPath(start, target)
                 if (path == null) {
                     Logger.warn("[StressPath] Hop $humanIndex: A* found no path from $start to $target")
@@ -123,12 +123,12 @@ object PathStressTest {
                 Logger.info("[Arceuus Library] DEBUG | Hop $humanIndex: Movement.walkTo($target)")
                 val walkOk = Movement.walkTo(target)
 
-                // Wait until we are near the target or timeout
+                // Wait until are near the target or timeout
                 val attempts = HOP_TIMEOUT_MS / 500
                 val arrived = Condition.wait(
                     {
                         if (cancelRequested) {
-                            // Break out of the wait loop quickly; we'll handle cancel below.
+                            // Break out of the wait loop quickly; 'll handle cancel below.
                             true
                         } else {
                             val cur = Players.local().tile()

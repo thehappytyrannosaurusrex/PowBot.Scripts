@@ -19,7 +19,7 @@ class RootBranch(script: ArceuusLibrary) :
     override val successComponent: TreeComponent<ArceuusLibrary>
         get() = inventorySanityBranch
 
-    // We don't use failedComponent in this pattern; mirror success.
+    // Don't use failedComponent in pattern; mirror success.
     override val failedComponent: TreeComponent<ArceuusLibrary>
         get() = successComponent
 }

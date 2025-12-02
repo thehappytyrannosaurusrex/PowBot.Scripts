@@ -5,18 +5,6 @@ import org.thehappytyrannosaurusrex.api.utils.Logger
 
 /**
  * Port of the core Kourend Library sequence solver from RuneLite:
- *
- * - There are N “slots” (bookcase indices) laid out in a ring.
- * - The game chooses one of 5 sequences (each 16 Books) and a start index (zero).
- * - It then places sequence[k] into slot (zero + k * step) mod N.
- *
- * This class:
- * - Tracks known books per index (from your search results)
- * - Scores how well each sequence fits those observations
- * - Fills possibleBooks[index] with predicted books from the best-fitting sequences
- * - Marks COMPLETE when exactly one best-fitting sequence remains
- *
- * This is pure logic: no PowBot APIs, no chat, no movement.
  */
 enum class SolverState {
     NO_DATA,
@@ -26,22 +14,18 @@ enum class SolverState {
 
 class LibrarySolver(
     /**
-     * Total number of “slots” (indices) in the library ring.
-     * This should match the size of your bookcase index list (RuneLite uses 352).
-     */
+ * Total number of “slots” (indices) in the library ring.
+ */
     private val slotCount: Int,
 
     /**
-     * All sequences the game can choose between.
-     * By default uses the 5 from LibrarySequences.
-     */
+ * All sequences the game can choose between.
+ */
     private val sequences: List<List<Books>> = LibrarySequences.sequences,
 
     /**
-     * Optional predicate for “double index” bookcases (the 6 weird top-floor cases).
-     * These are treated slightly differently in the original RuneLite solver.
-     * For now you can safely pass `{ false }` everywhere.
-     */
+ * Optional predicate for “double index” bookcases (the 6 weird top-floor cases).
+ */
     private val isDoubleIndex: (Int) -> Boolean = { false }
 ) {
     private val step: Int
@@ -75,8 +59,8 @@ class LibrarySolver(
     }
 
     /**
-     * Clear all known and possible books.
-     */
+ * Clear all known and possible books.
+ */
     fun reset(reason: String = "manual reset") {
         _state = SolverState.NO_DATA
         for (i in 0 until slotCount) {
@@ -87,12 +71,8 @@ class LibrarySolver(
     }
 
     /**
-     * Record an observation:
-     * - index = solver slot index (0-based)
-     * - book  = the layout book found there, or null for “no layout book / filler”
-     *
-     * This mirrors RuneLite's Library.mark(int bookcaseIndex, Book book).
-     */
+ * Record an observation:
+ */
     fun mark(index: Int, book: Books?) {
         if (index !in 0 until slotCount) {
             Logger.error("[Arceuus Library] SOLVER | mark() called with out-of-range index=$index")
@@ -102,8 +82,8 @@ class LibrarySolver(
         var currentIndex = index
         val currentBook = book
 
-        // This while loop mirrors the for (;;){...reset();continue;} structure
-        // in the RuneLite solver.
+        // While loop mirrors the for (;;){...reset();continue;} structure
+        // In the RuneLite solver.
         while (true) {
             val existingBook = knownBooks[currentIndex]
 
@@ -116,15 +96,15 @@ class LibrarySolver(
                     reset("mismatch at index=$currentIndex existing=$existingBook new=$currentBook")
                 }
             } else if (_state != SolverState.NO_DATA) {
-                // We had expectations; if this book isn't one of the expected possible books, reset.
+                // Had expectations; if book isn't one of the expected possible books, reset.
                 if (currentBook != null && !possibleBooks[currentIndex].contains(currentBook)) {
                     reset("unexpected book at index=$currentIndex book=$currentBook")
                 }
             }
 
             if (_state == SolverState.COMPLETE) {
-                // Layout previously solved. If we now see nothing where we were
-                // expecting *some* book that isn't VARLAMORE_ENVOY, assume the layout changed.
+                // Layout previously solved. If now see nothing where were
+                // Expecting *some* book that isn't VARLAMORE_ENVOY, assume the layout changed.
                 if (currentBook == null &&
                     possibleBooks[currentIndex].isNotEmpty() &&
                     possibleBooks[currentIndex].none { it == Books.VARLAMORE_ENVOY }
@@ -136,7 +116,7 @@ class LibrarySolver(
                 }
             }
 
-            // From here, we (re)set the observation and do the sequence scoring.
+            // From here, (re)set the observation and do the sequence scoring.
             Logger.info("[Arceuus Library] SOLVER | Setting index=$currentIndex book=$currentBook")
             knownBooks[currentIndex] = currentBook
 
@@ -175,7 +155,7 @@ class LibrarySolver(
                         if (slotBook != null && seqI < sequence.size) {
                             val expected = sequence[seqI]
                             if (slotBook != expected) {
-                                // This sequence is incompatible with observations.
+                                // Sequence is incompatible with observations.
                                 inconsistent = true
                                 found = 0
                                 break
@@ -200,14 +180,14 @@ class LibrarySolver(
                         certainty.joinToString(prefix = "[", postfix = "]")
             )
 
-            // Clear all possibleBooks – we will recompute them from best-fitting sequences.
+            // Clear all possibleBooks – will recompute them from best-fitting sequences.
             for (i in 0 until slotCount) {
                 possibleBooks[i].clear()
             }
 
             val max = certainty.maxOrNull() ?: 0
 
-            // RuneLite: if we have books set but 0 sequences match, something is wrong → reset + retry.
+            // RuneLite: if have books set but 0 sequences match, something is wrong → reset + retry.
             if (max == 0) {
                 reset("no sequences match current observations")
                 // Retry once with the fresh state, like RuneLite's `continue;` in the for(;;) loop.
@@ -244,11 +224,8 @@ class LibrarySolver(
     }
 
     /**
-     * Find the “zero” index for a sequence, assuming that [book] at [bookcaseIndex]
-     * corresponds to some element of [sequence].
-     *
-     * RuneLite: getBookcaseZeroIndexForSequenceWithBook(...)
-     */
+ * Find the “zero” index for a sequence, assuming that [book] at [bookcaseIndex]
+ */
     private fun zeroIndexForSequence(
         sequence: List<Books>,
         bookcaseIndex: Int,

@@ -10,11 +10,8 @@ import kotlin.random.Random
 object ScriptUtils {
 
     /**
-     * Log an informational message and stop the given script.
-     *
-     * @param delayRangeMs Optional range of milliseconds to sleep before stopping.
-     *                     If null, no delay is applied.
-     */
+ * Log an informational message and stop the given script.
+ */
     fun stopWithInfo(
         script: TreeScript,
         message: String,
@@ -29,11 +26,8 @@ object ScriptUtils {
     }
 
     /**
-     * Log an error message and stop the given script.
-     *
-     * @param delayRangeMs Optional range of milliseconds to sleep before stopping.
-     *                     Defaults to 1000..3000 to mimic a short human-like pause.
-     */
+ * Log an error message and stop the given script.
+ */
     fun stopWithError(
         script: TreeScript,
         message: String,

@@ -6,8 +6,8 @@ package org.thehappytyrannosaurusrex.api.chat
 object ChatTextUtils {
 
     /**
-     * Strip <col=...> and corresponding </col> tags.
-     */
+ * Strip <col=...> and corresponding </col> tags.
+ */
     fun stripColorTags(text: String): String {
         return text
             .replace(Regex("""(?i)<\s*col\s*=\s*[^>]+>"""), "")
@@ -15,15 +15,15 @@ object ChatTextUtils {
     }
 
     /**
-     * Replace <br> / <br/> tags with a single space.
-     */
+ * Replace <br> / <br/> tags with a single space.
+ */
     fun replaceBreakTagsWithSpaces(text: String): String {
         return text.replace(Regex("""(?i)<br\s*/?>"""), " ")
     }
 
     /**
-     * Convert “curly” quotes to plain ASCII quotes.
-     */
+ * Convert “curly” quotes to plain ASCII quotes.
+ */
     fun normaliseQuotesToAscii(text: String): String {
         return text
             .replace("‘", "'")
@@ -33,8 +33,8 @@ object ChatTextUtils {
     }
 
     /**
-     * Collapse runs of whitespace to a single space and trim ends.
-     */
+ * Collapse runs of whitespace to a single space and trim ends.
+ */
     fun normaliseWhitespace(text: String): String {
         return text
             .replace("\\s+".toRegex(), " ")
@@ -42,12 +42,8 @@ object ChatTextUtils {
     }
 
     /**
-     * Normalise NPC dialogue for pattern matching:
-     * - Remove <col=...>...</col> tags
-     * - Turn <br> into spaces
-     * - Convert curly quotes to ASCII
-     * - Lower-case and collapse whitespace
-     */
+ * Normalise NPC dialogue for pattern matching:
+ */
     fun normaliseNpcText(message: String): String {
         val noColors = stripColorTags(message)
         val noBreaks = replaceBreakTagsWithSpaces(noColors)
@@ -57,12 +53,8 @@ object ChatTextUtils {
     }
 
     /**
-     * Last thing between quotes ("..." or '...') in a line of dialogue.
-     *
-     * Works with curly quotes and ignores apostrophes inside words by looking for
-     * proper opening/closing quote pairs.
-     * Also normalises any <br> tags within the quoted segment to spaces.
-     */
+ * Last thing between quotes ("..." or '...') in a line of dialogue.
+ */
     fun extractLastQuotedSegment(message: String): String? {
         val quotePattern = Regex("[\"“']([^\"”']+)[\"”']")
         val matches = quotePattern.findAll(message).toList()
