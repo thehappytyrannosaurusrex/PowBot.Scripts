@@ -1,7 +1,4 @@
-/* Project: Arceuus Library Script (PowBot) */
-
 package org.thehappytyrannosaurusrex.api.utils
-import org.thehappytyrannosaurusrex.api.utils.Logger
 
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -11,8 +8,8 @@ class Timer(var time: Number = 0L) {
 
     companion object {
         fun formatTime(time: Long, addMillis: Boolean = false): String {
-            if (time <= 0L)
-                return "--:--:--"
+            if (time <= 0L) return "--:--:--"
+
             val totalSec = time / 1000
             val totalMin = totalSec / 60
             val totalHour = totalMin / 60

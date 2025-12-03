@@ -25,9 +25,7 @@ import org.powbot.api.event.MessageEvent
 import com.google.common.eventbus.Subscribe
 import org.thehappytyrannosaurusrex.api.utils.ScriptUtils
 import org.thehappytyrannosaurusrex.arceuuslibrary.state.LibraryState
-import org.thehappytyrannosaurusrex.arceuuslibrary.state.LibraryNpcs
 import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatEvent
-
 
 @ScriptManifest(
     name = "Arceuus Library",
@@ -87,10 +85,7 @@ import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatEvent
 )
 class ArceuusLibrary : TreeScript() {
 
-    // Live configuration built on start
     private lateinit var config: Config
-
-    // Owns chat parsing + manual solver debug behavior.
     private lateinit var debugController: LibraryDebugController
 
     private val cameraController = CameraController()
@@ -100,8 +95,6 @@ class ArceuusLibrary : TreeScript() {
     private fun handleLibraryChatEvent(event: LibraryChatEvent) {
         when (event) {
             is LibraryChatEvent.CustomerRequested -> {
-                // Don't know the NPC name yet, so pass null for now.
-                // Once can identify which NPC 're talking to, 'll pass that here.
                 state().onCustomerRequested(
                     npcName = null,
                     rawTitle = event.rawTitle,
@@ -120,35 +113,26 @@ class ArceuusLibrary : TreeScript() {
                 Logger.info("[Arceuus Library] STATE | Layout reset detected; LibraryState cleared.")
             }
 
-            // 'll use these later for ping-pong / cooldown logic.
             is LibraryChatEvent.NpcMetaDialogue -> {
-                // Example future usage:
-                // If (event.kind == NpcMetaKind.RECENTLY_HELPED_ALREADY && lastNpcName != null) {
-                // State().markRecentlyHelped(lastNpcName)
-                // }
+                // Future use for ping-pong / cooldown logic
             }
 
             else -> {
-                // Other events (ShelfBookFound, ShelfEmpty, etc.) are handled by the solver.
+                // Other events handled by solver
             }
         }
     }
 
-    // --- Root of behavior tree --- //
     override val rootComponent: TreeComponent<*>
         get() = RootBranch(this)
 
-    // --- Accessors used by branches/leaves later ---
     fun selectedXpType(): XpType = config.xpType
     fun shouldUseGraceful(): Boolean = config.useGraceful
     fun shouldUseStamina(): Boolean = config.useStamina
     fun shouldAllowTravelItems(): Boolean = config.allowTravelItems
     fun targetLevel(): Int = config.stopAtLevel
     fun state(): LibraryState = libraryState
-
-    // NEW: let leaves access the camera helper
     fun camera(): CameraController = cameraController
-
     fun trackedSkillId(): Int = config.trackedSkillId
     fun debugMode(): DebugMode = config.debugMode
 
@@ -157,21 +141,17 @@ class ArceuusLibrary : TreeScript() {
 
         Logger.info("[Arceuus Library] MAIN | Arceuus Library script starting…")
 
-        // Build config snapshot from script options
         config = buildConfig()
         Logger.info("[Arceuus Library] MAIN | User options parsed and validated.")
 
-        // NEW: set up debug controller now that config is ready
         debugController = LibraryDebugController(
             debugModeProvider = { config.debugMode },
             onEventFromChat = { event -> handleLibraryChatEvent(event) }
         )
 
-        // Reset manual solver + high level library state on script start
         debugController.resetManualSolver("script start")
         libraryState.resetAll()
         Logger.info("[Arceuus Library] MAIN | LibraryState after reset: ${state()}")
-
 
         applyDaxBlacklist()
 
@@ -192,19 +172,14 @@ class ArceuusLibrary : TreeScript() {
         }
     }
 
-    // Server messages (e.g. empty shelf / layout reset / " find: ...")
     @Subscribe
     fun onServerMessage(event: MessageEvent) {
         val msg = event.message ?: return
 
-        // Guard against very early events, just in case.
-        if (!::debugController.isInitialized) {
-            return
-        }
+        if (!::debugController.isInitialized) return
 
         debugController.onServerMessage(msg)
     }
-
 
     fun runSelectedDebugMode() {
         when (config.debugMode) {
@@ -217,7 +192,6 @@ class ArceuusLibrary : TreeScript() {
             }
             DebugMode.PATH_STRESS_TEST -> {
                 Logger.info("[Arceuus Library] DEBUG | Running path stress test debug mode…")
-                // Requires to start inside the library (any floor).
                 PathStressTest.runLiveStress(hops = 30)
             }
             DebugMode.CHAT_PARSER_DEBUG -> {
@@ -244,7 +218,6 @@ class ArceuusLibrary : TreeScript() {
         }
     }
 
-
     private fun stopIfReachedTargetLevel(): Boolean {
         val target = config.stopAtLevel
         if (target <= 0) return false
@@ -260,8 +233,6 @@ class ArceuusLibrary : TreeScript() {
     }
 
     override fun poll() {
-        // Always let the debug controller sniff chat so that parser logs and
-        // LibraryState updates work in all modes, not just explicit debug modes.
         if (::debugController.isInitialized) {
             debugController.tickChatDebug()
         }
@@ -270,7 +241,6 @@ class ArceuusLibrary : TreeScript() {
             config.debugMode == DebugMode.MANUAL_SOLVER_DEBUG ||
             config.debugMode == DebugMode.CHAT_AND_MANUAL_SOLVER_DEBUG
         ) {
-            // In these modes *only* watch chat & server messages; no clicks or movement.
             return
         }
 
@@ -278,12 +248,9 @@ class ArceuusLibrary : TreeScript() {
         super.poll()
     }
 
-
     override fun onStop() {
         PathStressTest.cancel()
         Logger.info("[Arceuus Library] MAIN | Arceuus Library script has stopped.")
         super.onStop()
-
     }
-
 }

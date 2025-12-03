@@ -320,15 +320,4 @@ object CrabData {
         const val PESTLE_MORTAR = 233
     }
 
-    fun getRawCrabItems(): List<Item> {
-        return CrabMeat.values().flatMap { type ->
-            Inventory.stream()
-                .id(type.rawId ?: -1)
-                .name(type.rawName)
-                .toList()
-        }
-    }
-
-    fun hasAnyRawCrabs(): Boolean = getRawCrabItems().isNotEmpty()
-
 }

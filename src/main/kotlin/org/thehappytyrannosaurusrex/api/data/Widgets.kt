@@ -4,12 +4,8 @@ import org.powbot.api.rt4.Component
 import org.powbot.api.rt4.Widget
 import org.powbot.api.rt4.Widgets
 
-/**
- * Simple reference to a specific widget path: (group, component indices...).
- */
 data class WidgetRef(
     val group: Int,
-    // FIX: Changed vararg val path: Int to val path: IntArray for data class compatibility.
     val path: IntArray
 ) {
     fun widget(): Widget = Widgets.widget(group)
@@ -25,79 +21,35 @@ data class WidgetRef(
     }
 }
 
-
-/**
- * Central place for widget + component IDs used by scripts.
- */
 object WidgetIds {
 
-    /**
-     * Chatbox (All / Game / Public / Friends / Clan / Trade / etc).
-     */
     object Chatbox {
-        // Top row tabs (All / Game / Public / ...).
-        // FIX: Used intArrayOf(...)
         val HEADER = WidgetRef(162, intArrayOf(1))
     }
 
-    /**
-     * Resizable inventory sidebar (side inventory pane).
-     */
     object InventoryResizable {
-        // Root component of the resizable inventory overlay.
-        // FIX: Used intArrayOf(...)
         val ROOT = WidgetRef(149, intArrayOf(0))
     }
 
-    /**
-     * Resizable spellbook sidebar.
-     */
     object SpellbookResizable {
-        // Root component of the resizable spellbook overlay.
-        // FIX: Used intArrayOf(...)
         val ROOT = WidgetRef(218, intArrayOf(0))
     }
 
-    /**
-     * Resizable combat sidebar.
-     */
     object CombatResizable {
-        // Root component of the resizable combat overlay.
-        // FIX: Used intArrayOf(...)
         val ROOT = WidgetRef(593, intArrayOf(0))
     }
 
-    /**
-     * Toplevel viewport buttons (minimap, compass, chat toggle, etc).
-     */
     object ToplevelButtons {
-        // Minimap compass with "Look North/East/South/West" actions.
-        // FIX: Used intArrayOf(...)
         val COMPASS = WidgetRef(601, intArrayOf(1))
-
-        // XP Popup
-        // FIX: Used intArrayOf(...)
         val MINI_XP_STATS = WidgetRef(601, intArrayOf(3))
-
-        // Chatbox toggle button ("Toggle chat").
-        // FIX: Used intArrayOf(...)
         val CHAT_TOGGLE = WidgetRef(601, intArrayOf(46))
-
-        // Chatbox toggle button ("Toggle chat").
-        // FIX: Used intArrayOf(...)
         val SKILLS_TOGGLE = WidgetRef(601, intArrayOf(46))
-
     }
-
-    /**
-     * Skills menu widget
-     */
 
     object StatsWidget {
         private const val GROUP = 320
         private const val LVL_SUB_COMPONENT = 4
 
-        // FIX: Used intArrayOf(...) for all calls
         val ATTACK = WidgetRef(GROUP, intArrayOf(1))
         val STRENGTH = WidgetRef(GROUP, intArrayOf(2))
         val DEFENCE = WidgetRef(GROUP, intArrayOf(3))
@@ -123,22 +75,12 @@ object WidgetIds {
         val FARMING = WidgetRef(GROUP, intArrayOf(23))
         val SAILING = WidgetRef(GROUP, intArrayOf(24))
 
-        // Small helper so PlayerStats does not need to know sub-component index
         fun levelComponent(ref: WidgetRef): Component =
             ref.component().component(LVL_SUB_COMPONENT)
     }
 
-    /**
-     * Antique lamp skill selection interface.
-     */
     object AntiqueLamp {
-        // Root, just to have the group handy.
-        // FIX: Used intArrayOf(...)
         val ROOT = WidgetRef(240, intArrayOf(0))
-
-        // "Confirm: [Skill]" button.
-        // FIX: Used intArrayOf(...)
         val CONFIRM = WidgetRef(240, intArrayOf(27))
-        // Skill buttons themselves are addressed via LampSkill.widgetIndex.
     }
 }
