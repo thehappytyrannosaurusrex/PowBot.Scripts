@@ -92,7 +92,7 @@ object MagicUtil {
         if (ensureTab && !ensureSpellbookOpen(requireOverlay)) {
             return false
         }
-        return Magic.ready(spell)
+        return spell.canCast()
     }
 
     /**
