@@ -9,7 +9,6 @@ data class WidgetRef(
     val path: IntArray
 ) {
     fun widget(): Widget = Widgets.widget(group)
-
     fun component(): Component {
         require(path.isNotEmpty()) { "WidgetRef path must contain at least one index" }
 
@@ -82,5 +81,35 @@ object WidgetIds {
     object AntiqueLamp {
         val ROOT = WidgetRef(240, intArrayOf(0))
         val CONFIRM = WidgetRef(240, intArrayOf(27))
+    }
+
+    // -------------------------------------------------------------------------
+    // Settings Widgets
+    // -------------------------------------------------------------------------
+
+    /**
+     * Settings tab button (opens "All Settings" panel).
+     * Widget 116, Component 32 — interact option: "All Settings"
+     */
+    object SettingsTab {
+        const val GROUP = 116
+        val ALL_SETTINGS_BUTTON = WidgetRef(GROUP, intArrayOf(32))
+    }
+
+    /**
+     * Full "All Settings" panel that opens after clicking the All Settings button.
+     * Widget 134 — contains search bar and setting toggles.
+     */
+    object AllSettingsPanel {
+        const val GROUP = 134
+
+        /** Close button — interact option: "Close" */
+        val CLOSE_BUTTON = WidgetRef(GROUP, intArrayOf(4))
+
+        /** Search bar — interact option: "Show keyboard" (or click to focus) */
+        val SEARCH_BAR = WidgetRef(GROUP, intArrayOf(11))
+
+        /** "Tap to drop items" toggle — interact option: "Toggle" */
+        val TAP_TO_DROP_TOGGLE = WidgetRef(GROUP, intArrayOf(167))
     }
 }

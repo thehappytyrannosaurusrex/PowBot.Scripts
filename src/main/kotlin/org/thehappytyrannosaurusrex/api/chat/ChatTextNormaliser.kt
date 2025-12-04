@@ -3,7 +3,7 @@ package org.thehappytyrannosaurusrex.api.chat
 /**
  * Shared text helpers for parsing NPC / chat dialogue.
  */
-object ChatTextUtils {
+object ChatTextNormaliser {
 
     /**
  * Strip <col=...> and corresponding </col> tags.

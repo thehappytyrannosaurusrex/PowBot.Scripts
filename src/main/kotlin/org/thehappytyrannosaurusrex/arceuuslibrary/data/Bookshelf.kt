@@ -2392,7 +2392,7 @@ object Bookshelves {
             shelfObjId = 28206,
             objTile = Tile(1623, 3791, 2),
             facing = Facing.S,
-            standingTile = Tile(1623, 3791, 2),
+            standingTile = Tile(1623, 3792, 2),
             area = Area.SOUTHWEST,
             floor = 2
         ),

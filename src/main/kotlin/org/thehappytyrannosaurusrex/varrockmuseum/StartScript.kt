@@ -2,14 +2,13 @@ package org.thehappytyrannosaurusrex.varrockmuseum
 
 import org.powbot.mobile.service.ScriptUploader
 
-/**
- * Local launcher for the Varrock Museum Cleaner script.
- */
+//Device name is Pixel 9 46251FDAS0082H or BlueStacks 127.0.0.1:5555
+
 fun main() {
     ScriptUploader().uploadAndStart(
         "Varrock Museum Cleaner",
         "main",
-        "127.0.0.1:5555",
+        "46251FDAS0082H",
         true,
         false
     )

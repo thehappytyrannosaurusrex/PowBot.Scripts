@@ -1,15 +1,11 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.tree
 
-import org.powbot.api.rt4.Inventory
 import org.powbot.api.script.tree.Branch
 import org.powbot.api.script.tree.TreeComponent
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
-import org.thehappytyrannosaurusrex.arceuuslibrary.tree.DepositInventoryAtBankLeaf
-import org.thehappytyrannosaurusrex.arceuuslibrary.tree.InventoryReadyLeaf
-import org.thehappytyrannosaurusrex.arceuuslibrary.tree.TravelOrLibraryBranch
 import org.thehappytyrannosaurusrex.api.utils.Logger
-import org.thehappytyrannosaurusrex.api.inventory.InventorySanity
+import org.thehappytyrannosaurusrex.api.inventory.InventoryManagement
 
 class InventorySanityBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Inventory sanity check") {
@@ -51,7 +47,7 @@ class InventorySanityBranch(script: ArceuusLibrary) :
     private val travelOrLibraryBranch = TravelOrLibraryBranch(script)
 
     override fun validate(): Boolean {
-        val hasNonAllowedItems = InventorySanity.hasNonAllowedItems(
+        val hasNonAllowedItems = InventoryManagement.hasNonAllowedItems(
             allowedItemIds = bookItemIds, 
             allowedByName = listOf<(String) -> Boolean>(
                 ::isGraceful,

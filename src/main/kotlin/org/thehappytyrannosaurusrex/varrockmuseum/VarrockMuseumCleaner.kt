@@ -12,14 +12,14 @@ import org.powbot.api.script.paint.Paint
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.api.script.tree.TreeComponent
 import org.powbot.api.script.tree.TreeScript
-import org.thehappytyrannosaurusrex.api.chat.DialogueUtils
-import org.thehappytyrannosaurusrex.api.inventory.DropUtils
-import org.thehappytyrannosaurusrex.api.inventory.InventorySanity
+import org.thehappytyrannosaurusrex.api.chat.DialogueHandler
+import DropUtils
+import org.thehappytyrannosaurusrex.api.inventory.InventoryManagement
 import org.thehappytyrannosaurusrex.api.ui.CameraController
 import org.thehappytyrannosaurusrex.api.ui.CameraInitProfile
 import org.thehappytyrannosaurusrex.api.ui.ViewportUi
 import org.thehappytyrannosaurusrex.api.utils.Logger
-import org.thehappytyrannosaurusrex.api.bank.BankUtils
+import org.thehappytyrannosaurusrex.api.utils.BankUtils
 import org.thehappytyrannosaurusrex.api.data.WidgetIds
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Config
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
@@ -77,7 +77,10 @@ import org.thehappytyrannosaurusrex.varrockmuseum.tree.MuseumBranches
         )
     ]
 )
+
 class VarrockMuseumCleaner : TreeScript() {
+
+    private val SCRIPT_NAME = "Varrock Museum Cleaner"
 
     // ------------------------------------------------------------------------
     // High level stage machine
@@ -134,15 +137,17 @@ class VarrockMuseumCleaner : TreeScript() {
     // Logging helper
     // ------------------------------------------------------------------------
 
-    fun log(tag: String, message: String) {
-        Logger.info("[Varrock Museum Cleaner] $tag | $message")
+    private fun log(tag: String, message: String) {
+        Logger.info(SCRIPT_NAME, tag, message)
     }
+
 
     // ------------------------------------------------------------------------
     // Lifecycle
     // ------------------------------------------------------------------------
 
     override fun onStart() {
+
         try {
             log("STARTUP", "Varrock Museum Cleaner started (rewrite).")
 
@@ -165,8 +170,8 @@ class VarrockMuseumCleaner : TreeScript() {
                 )
             )
             viewportUi.tidyOnStart()
+            DropUtils.enableTapToDrop()
             DropUtils.ensureInventoryTab()
-            checkTapToDrop()
 
             // Paint
             initPaint()
@@ -196,6 +201,7 @@ class VarrockMuseumCleaner : TreeScript() {
     override fun onStop() {
         log("STARTUP", "Varrock Museum Cleaner stopped.")
         log("STATS", "Lamps used: $lampsUsed")
+        super.onStop()
     }
 
     // ------------------------------------------------------------------------
@@ -261,7 +267,7 @@ class VarrockMuseumCleaner : TreeScript() {
             predicates += { name -> name.lowercase().trim() in commonArtefactNamesLc }
         }
 
-        return InventorySanity.hasNonAllowedItems(
+        return InventoryManagement.hasNonAllowedItems(
             allowedItemIds = allowedIds,
             allowedByName = predicates
         )
@@ -402,7 +408,7 @@ class VarrockMuseumCleaner : TreeScript() {
         log("NAV", "Interacted with $name at ${obj.tile()} using '$action'.")
 
         // After clicking a gate/door, there may be guard dialogue.
-        DialogueUtils.spamClickContinue(maxAttempts = 10)
+        DialogueHandler.spamClickContinue(maxAttempts = 10)
 
         Condition.sleep(600)
         return true
@@ -469,7 +475,7 @@ class VarrockMuseumCleaner : TreeScript() {
                 try {
                     Chat.sendInput("1")
                 } catch (_: Throwable) {
-                    DialogueUtils.spamClickContinue(maxAttempts = 5)
+                    DialogueHandler.spamClickContinue(maxAttempts = 5)
                 }
             }
 
@@ -611,18 +617,13 @@ class VarrockMuseumCleaner : TreeScript() {
         computeJunkItems().isNotEmpty()
 
     private fun fillInventoryFromRocks() {
-        // If 're not inside the cleaning area, focus on entering instead of clicking rocks.
         if (!C.CLEANING_AREA.contains(Players.local())) {
-            log("FILL", "Not in cleaning area; trying to enter via door/gate instead of clicking rocks.")
+            log("FILL", "Not in cleaning area; handling doors/gates.")
             handleMuseumDoorsAndGates()
             return
         }
 
-        if (Inventory.isFull()) {
-            return
-        }
-
-        log("FILL", "Taking Uncleaned finds until inventory is full.")
+        if (Inventory.isFull()) return
 
         val rock = Objects.stream()
             .id(*C.SPECIMEN_ROCK_IDS)
@@ -637,19 +638,25 @@ class VarrockMuseumCleaner : TreeScript() {
 
         if (!rock.inViewport()) {
             Camera.turnTo(rock)
+            Condition.sleep(Random.nextInt(300, 500))
         }
 
-        if (rock.interact("Take")) {
-            Condition.wait(
-                { Inventory.isFull() || !rock.valid() },
-                1000,
-                60
-            )
+        log("FILL", "Taking Uncleaned finds until inventory full.")
+
+        // Single interact call - the game continues giving finds automatically
+        // Condition.wait handles the waiting and is interruptible by PowBot
+        while (!Inventory.isFull()) {
+            rock.click() || rock.interact("Take")
+            Condition.sleep(Random.nextInt(400, 700))}
+
+
+        if (Inventory.isFull()) {
+            log("FILL", "Inventory is now full.")
         }
     }
 
     private fun cleanOnTables() {
-        log("CLEAN", "Cleaning Uncleaned finds at specimen tables.")
+        log("CLEAN", "Cleaning finds at specimen tables.")
 
         val table = Objects.stream()
             .id(C.SPECIMEN_TABLE_ID)
@@ -664,20 +671,27 @@ class VarrockMuseumCleaner : TreeScript() {
 
         if (!table.inViewport()) {
             Camera.turnTo(table)
+            Condition.sleep(Random.nextInt(300, 500))
         }
 
         val before = Inventory.stream().id(C.UNCLEANED_FIND).count().toInt()
 
-        if (table.interact("Clean") || table.interact("Clean Specimen table")) {
+        // Single click - game auto-cleans all
+        if (table.click() || table.interact("Clean")) {
             Condition.wait(
                 { Inventory.stream().id(C.UNCLEANED_FIND).isEmpty() },
                 2000,
-                120
+                60
             )
+
+            if (Chat.chatting() || Chat.canContinue()) {
+                DialogueHandler.spamClickContinue(maxAttempts = 5)
+            }
+
             val after = Inventory.stream().id(C.UNCLEANED_FIND).count().toInt()
             val cleaned = before - after
             if (cleaned > 0) {
-                log("CLEAN", "Cleaned $cleaned Uncleaned finds.")
+                log("CLEAN", "Cleaned $cleaned finds.")
             }
         }
     }
@@ -698,6 +712,7 @@ class VarrockMuseumCleaner : TreeScript() {
 
         if (!crate.inViewport()) {
             Camera.turnTo(crate)
+            Condition.sleep(Random.nextInt(300, 500))
         }
 
         val beforeCount = Inventory.stream()
@@ -710,18 +725,18 @@ class VarrockMuseumCleaner : TreeScript() {
             return
         }
 
-        if (crate.interact("Add finds") || crate.interact("Add finds Storage crate")) {
+        // Single click - game auto-adds all common artefacts
+        if (crate.click() || crate.interact("Add finds")) {
             Condition.wait(
-                {
-                    Inventory.stream().filtered { shouldTreatAsFind(it) }
-                        .count().toInt() < beforeCount || Chat.chatting()
-                },
-                500,
-                20
+                {!(Inventory.stream()
+                .filtered { shouldTreatAsFind(it) }
+                .isNotEmpty())},
+                1200,1800
             )
 
-            if (Chat.chatting()) {
-                DialogueUtils.spamClickContinue(maxAttempts = 5)
+
+            if (Chat.chatting() || Chat.canContinue()) {
+                DialogueHandler.spamClickContinue(maxAttempts = 5)
             }
 
             val afterCount = Inventory.stream()
@@ -731,7 +746,7 @@ class VarrockMuseumCleaner : TreeScript() {
             val stored = beforeCount - afterCount
 
             if (stored > 0) {
-                log("STORE", "Added $stored find(s) to the storage crate.")
+                log("STORE", "Added $stored find(s) to storage crate.")
             }
         }
     }
@@ -833,7 +848,7 @@ class VarrockMuseumCleaner : TreeScript() {
     private fun dropInventoryExceptKeep(reason: String) {
         val toDrop = computeJunkItems()
         if (toDrop.isEmpty()) {
-            log("DROP", "No junk items to drop for $reason.")
+            log("DROP", "No junk to drop for $reason.")
             return
         }
 
@@ -1035,7 +1050,7 @@ class VarrockMuseumCleaner : TreeScript() {
             DropUtils.ensureInventoryTab()
 
             repeat(count) {
-                val lamp = Inventory.stream().id(C.ANTIQUE_LAMP).first()
+                val lamp = Inventory.stream().name(C.ANTIQUE_LAMP).first()
                 if (!lamp.valid()) return
 
                 if (!canUseLampOnSelectedSkill()) {
@@ -1099,7 +1114,7 @@ class VarrockMuseumCleaner : TreeScript() {
 
                 // Let XP drop and dialogues settle.
                 Condition.sleep(1200)
-                DialogueUtils.spamClickContinue(maxAttempts = 5)
+                DialogueHandler.spamClickContinue(maxAttempts = 5)
 
                 lampsUsed++
             }

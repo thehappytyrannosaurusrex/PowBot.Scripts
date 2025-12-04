@@ -16,8 +16,8 @@ enum class LampSkill(
     MAGIC("Magic", 5, Skill.Magic),
     DEFENCE("Defence", 6, Skill.Defence),
 
-    // Sailing: UI-only for now, no underlying Skill mapping
-    SAILING("Sailing", 7, null),
+    // Sailing: UI-only for now, no underlying Skill mapping, using Skill.overall
+    SAILING("Sailing", 7, Skill.Overall),
 
     HITPOINTS("Hitpoints", 8, Skill.Hitpoints),
     PRAYER("Prayer", 9, Skill.Prayer),

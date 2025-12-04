@@ -25,7 +25,7 @@ import org.thehappytyrannosaurusrex.crabtrapping.data.*
 class CrabTrapping : AbstractScript() {
 
     companion object {
-        private const val SCRIPT_NAME = "CrabTrapping"
+        private const val SCRIPT_NAME = "Crab Trapper"
         private const val MAX_REBAIT_TIME_MS = 10_000L
     }
 

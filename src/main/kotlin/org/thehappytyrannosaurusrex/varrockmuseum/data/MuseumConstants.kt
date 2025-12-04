@@ -5,13 +5,13 @@ import org.powbot.api.Tile
 
 object MuseumConstants {
     // Items
-    const val UNCLEANED_FIND = 11175
-    const val ANTIQUE_LAMP = 11189
-    const val TROWEL = 676
-    const val ROCK_PICK = 675
-    const val SPECIMEN_BRUSH = 670
-    const val LEATHER_GLOVES = 1059
-    const val LEATHER_BOOTS = 1061
+    const val UNCLEANED_FIND = "Uncleaned find"
+    const val ANTIQUE_LAMP = "Antique Lamp"
+    const val TROWEL = "Trowel"
+    const val ROCK_PICK = "Rock pick"
+    const val SPECIMEN_BRUSH = "Specimen brush"
+    const val LEATHER_GLOVES = "Leather gloves"
+    const val LEATHER_BOOTS = "Leather boots"
 
     /**
  * Name-based groupings for cleaned finds / rewards.
@@ -26,7 +26,6 @@ object MuseumConstants {
         "Clean necklace"
     )
 
-    // 2) Common artefacts (crate-eligible finds want to store)
     val COMMON_ARTEFACT_NAMES = setOf(
         "Pottery",
         "Jewellery",
@@ -34,7 +33,6 @@ object MuseumConstants {
         "Arrowheads"
     )
 
-    // 3) Unremarkable finds (fine to drop unless user asks to keep them)
     val UNREMARKABLE_FIND_NAMES = setOf(
         "Broken arrow",
         "Broken glass",
@@ -43,8 +41,6 @@ object MuseumConstants {
         "Bones",
         "Coins"
     )
-
-    // 4) Storage crate rewards (what get back after "Add finds")
     val STORAGE_CRATE_REWARD_NAMES = setOf(
         "Coins",
         "Bowl",
@@ -73,9 +69,9 @@ object MuseumConstants {
     const val QUEST_DIGSITE_ID = 29
 
     // Objects
-    const val SPECIMEN_TABLE_ID = 24556
-    const val STORAGE_CRATE_ID = 24534
-    val SPECIMEN_ROCK_IDS = intArrayOf(24557, 24558, 24559)
+    const val SPECIMEN_TABLE = "Specimen table"
+    const val STORAGE_CRATE = "Storage crate"
+    val SPECIMEN_ROCK = "Dig Site specimen rocks"
 
     // Cleaning area & navigation
     val CLEANING_AREA = Area(Tile(3253, 3440, 0), Tile(3268, 3455, 0))
@@ -92,7 +88,7 @@ object MuseumConstants {
     /**
  * Items keep in the INVENTORY when doing an initial bank clean.
  */
-    val INITIAL_KEEP_FOR_BANK = intArrayOf(
+    val INITIAL_KEEP_FOR_BANK = setOf(
         TROWEL,
         ROCK_PICK,
         SPECIMEN_BRUSH,
@@ -105,7 +101,7 @@ object MuseumConstants {
     /**
  * Items never drop via the generic "drop junk" helper.
  */
-    val KEEP_WHEN_DROPPING = intArrayOf(
+    val KEEP_WHEN_DROPPING = setOf(
         TROWEL,
         ROCK_PICK,
         SPECIMEN_BRUSH,

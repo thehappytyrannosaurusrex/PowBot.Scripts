@@ -5,7 +5,7 @@ import org.powbot.api.script.tree.Leaf
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
-import org.thehappytyrannosaurusrex.api.bank.BankUtils
+import org.thehappytyrannosaurusrex.api.utils.BankUtils
 import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class DepositInventoryAtBankLeaf(script: ArceuusLibrary) :

@@ -3,10 +3,14 @@ package org.thehappytyrannosaurusrex.api.chat
 import org.powbot.api.Condition
 import org.powbot.api.rt4.Chat
 
-// Simple helpers for navigating NPC dialogues
-object DialogueUtils {
+/**
+ * Simple helpers for plowing through NPC / guard dialogues.
+ */
+object DialogueHandler {
 
-    // Click through "click to continue" dialogue up to maxAttempts times
+    /**
+ * Clicks through any "click to continue" style dialogue up to [maxAttempts] times.
+ */
     fun spamClickContinue(maxAttempts: Int = 10, delayMs: Int = 800) {
         var attempts = 0
         while (Chat.canContinue() && attempts < maxAttempts) {

@@ -2,7 +2,7 @@ package org.thehappytyrannosaurusrex.arceuuslibrary.solver
 
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
 import org.thehappytyrannosaurusrex.api.utils.Logger
-import org.thehappytyrannosaurusrex.api.chat.ChatTextUtils
+import org.thehappytyrannosaurusrex.api.chat.ChatTextNormaliser
 import org.thehappytyrannosaurusrex.api.chat.ChatSource
 
 object LibraryChatParser {
@@ -158,7 +158,7 @@ object LibraryChatParser {
 
     // NPC request lines with coloured, quoted titles.
     private fun parseCustomerRequest(message: String): LibraryChatEvent? {
-        val norm = ChatTextUtils.normaliseNpcText(message)
+        val norm = ChatTextNormaliser.normaliseNpcText(message)
 
         val looksLikeRequest = REQUEST_PREFIXES.any { prefix ->
             norm.startsWith(prefix)
@@ -189,7 +189,7 @@ object LibraryChatParser {
 
     // NPC meta dialogue: busy / reward / recently helped.
     private fun parseNpcMetaDialogue(message: String): LibraryChatEvent? {
-        val norm = ChatTextUtils.normaliseNpcText(message)
+        val norm = ChatTextNormaliser.normaliseNpcText(message)
 
         // Busy / already helping someone else.
         if (OTHER_CUSTOMER_LINES.any { line -> norm.startsWith(line) }) {
@@ -234,14 +234,14 @@ private fun extractQuotedTitle(message: String): String? {
         val inner = colMatch.groupValues.getOrNull(1)?.trim().orEmpty()
         if (inner.isNotEmpty()) {
             // Normalise any <br> tags to spaces so titles match static definitions.
-            return ChatTextUtils.replaceBreakTagsWithSpaces(inner).trim()
+            return ChatTextNormaliser.replaceBreakTagsWithSpaces(inner).trim()
         }
     }
 
     // 2) Fallback: use the last quoted segment in the line. deliberately use the LAST
     // Match so that apostrophes in words like "'m" / "'d" don't get mistaken for
     // Quote delimiters around the title.
-    val inner = ChatTextUtils.extractLastQuotedSegment(message) ?: return null
+    val inner = ChatTextNormaliser.extractLastQuotedSegment(message) ?: return null
     return inner
 }
 
