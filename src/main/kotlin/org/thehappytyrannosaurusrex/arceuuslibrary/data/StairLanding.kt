@@ -2,48 +2,32 @@ package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
 import org.powbot.api.Tile
 
-data class StairLink(val from: Tile, val to: Tile, val cost: Int = 10)
+// Represents a traversable stair connection for A* pathfinding
+data class StairLink(
+    val from: Tile,
+    val to: Tile,
+    val cost: Int = 1
+) {
+    val changesFloor: Boolean get() = from.floor != to.floor
+}
 
-object StairLandings {
+object StairLanding {
 
+    // All stair connections in the library (bidirectional pairs)
     val LINKS: List<StairLink> = listOf(
         // SW GROUND ↔ SW FIRST
-        StairLink(Tile(1617, 3794, 0), Tile(1610, 3794, 1)),
-        StairLink(Tile(1610, 3794, 1), Tile(1617, 3794, 0)),
-        StairLink(Tile(1617, 3795, 0), Tile(1610, 3795, 1)),
-        StairLink(Tile(1610, 3795, 1), Tile(1617, 3795, 0)),
-        StairLink(Tile(1617, 3796, 0), Tile(1610, 3796, 1)),
-        StairLink(Tile(1610, 3796, 1), Tile(1617, 3796, 0)),
-        StairLink(Tile(1617, 3797, 0), Tile(1610, 3797, 1)),
-        StairLink(Tile(1610, 3797, 1), Tile(1617, 3797, 0)),
+        StairLink(Tile(1616, 3808, 0), Tile(1616, 3815, 1)),
+        StairLink(Tile(1616, 3815, 1), Tile(1616, 3808, 0)),
+        StairLink(Tile(1617, 3808, 0), Tile(1616, 3815, 1)),
+        StairLink(Tile(1616, 3815, 1), Tile(1617, 3808, 0)),
 
         // SW FIRST ↔ SW SECOND
-        StairLink(Tile(1621, 3791, 1), Tile(1621, 3798, 2)),
-        StairLink(Tile(1621, 3798, 2), Tile(1621, 3791, 1)),
-        StairLink(Tile(1622, 3791, 1), Tile(1622, 3798, 2)),
-        StairLink(Tile(1622, 3798, 2), Tile(1622, 3791, 1)),
-
-        // NW GROUND ↔ NW FIRST
-        StairLink(Tile(1617, 3825, 0), Tile(1610, 3825, 1)),
-        StairLink(Tile(1610, 3825, 1), Tile(1617, 3825, 0)),
-        StairLink(Tile(1617, 3826, 0), Tile(1610, 3826, 1)),
-        StairLink(Tile(1610, 3826, 1), Tile(1617, 3826, 0)),
-        StairLink(Tile(1617, 3827, 0), Tile(1610, 3827, 1)),
-        StairLink(Tile(1610, 3827, 1), Tile(1617, 3827, 0)),
-        StairLink(Tile(1617, 3828, 0), Tile(1610, 3828, 1)),
-        StairLink(Tile(1610, 3828, 1), Tile(1617, 3828, 0)),
-
-        // NW FIRST ↔ NW SECOND
-        StairLink(Tile(1615, 3819, 1), Tile(1608, 3819, 2)),
-        StairLink(Tile(1608, 3819, 2), Tile(1615, 3819, 1)),
-        StairLink(Tile(1615, 3818, 1), Tile(1608, 3818, 2)),
-        StairLink(Tile(1608, 3818, 2), Tile(1615, 3818, 1)),
+        StairLink(Tile(1623, 3815, 1), Tile(1623, 3808, 2)),
+        StairLink(Tile(1623, 3808, 2), Tile(1623, 3815, 1)),
+        StairLink(Tile(1624, 3815, 1), Tile(1624, 3808, 2)),
+        StairLink(Tile(1624, 3808, 2), Tile(1624, 3815, 1)),
 
         // NE GROUND ↔ NE FIRST
-        StairLink(Tile(1643, 3818, 0), Tile(1643, 3825, 1)),
-        StairLink(Tile(1643, 3825, 1), Tile(1643, 3818, 0)),
-        StairLink(Tile(1644, 3818, 0), Tile(1644, 3825, 1)),
-        StairLink(Tile(1644, 3825, 1), Tile(1644, 3818, 0)),
         StairLink(Tile(1645, 3818, 0), Tile(1645, 3825, 1)),
         StairLink(Tile(1645, 3825, 1), Tile(1645, 3818, 0)),
         StairLink(Tile(1646, 3818, 0), Tile(1645, 3825, 1)),
@@ -59,12 +43,21 @@ object StairLandings {
         StairLink(Tile(1638, 3810, 1), Tile(1638, 3803, 2)),
         StairLink(Tile(1638, 3803, 2), Tile(1638, 3810, 1)),
         StairLink(Tile(1639, 3810, 1), Tile(1639, 3803, 2)),
-        StairLink(Tile(1639, 3803, 2), Tile(1639, 3810, 1)),
+        StairLink(Tile(1639, 3803, 2), Tile(1639, 3810, 1))
     )
 
-    fun from(tile: Tile): List<StairLink> =
-        LINKS.filter { it.from == tile }
+    // Get all stair links from a specific tile
+    fun from(tile: Tile): List<StairLink> = LINKS.filter { it.from == tile }
 
-    fun targetsFrom(tile: Tile): List<Tile> =
-        LINKS.asSequence().filter { it.from == tile }.map { it.to }.toList()
+    // Get all destination tiles reachable from a specific tile via stairs
+    fun targetsFrom(tile: Tile): List<Tile> = LINKS.filter { it.from == tile }.map { it.to }
+
+    // Check if a tile is a stair entry point
+    fun isStairTile(tile: Tile): Boolean = LINKS.any { it.from == tile }
+
+    // Get the link between two tiles if it exists
+    fun linkBetween(from: Tile, to: Tile): StairLink? = LINKS.firstOrNull { it.from == from && it.to == to }
+
+    // Get all stair tiles on a specific floor
+    fun stairTilesOnFloor(floor: Int): List<Tile> = LINKS.filter { it.from.floor == floor }.map { it.from }.distinct()
 }

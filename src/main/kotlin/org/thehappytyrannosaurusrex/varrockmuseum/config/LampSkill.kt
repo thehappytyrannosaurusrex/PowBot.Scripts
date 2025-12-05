@@ -2,23 +2,13 @@ package org.thehappytyrannosaurusrex.varrockmuseum.config
 
 import org.powbot.api.rt4.walking.model.Skill
 
-/**
- * Mapping of: human-readable name -> widget 240 component index -> walking.model.Skill?
- */
-enum class LampSkill(
-    val displayName: String,
-    val widgetIndex: Int,
-    val trackedSkill: Skill?
-) {
+enum class LampSkill(val displayName: String, val widgetIndex: Int, val trackedSkill: Skill?) {
     ATTACK("Attack", 2, Skill.Attack),
     STRENGTH("Strength", 3, Skill.Strength),
     RANGED("Ranged", 4, Skill.Ranged),
     MAGIC("Magic", 5, Skill.Magic),
     DEFENCE("Defence", 6, Skill.Defence),
-
-    // Sailing: UI-only for now, no underlying Skill mapping, using Skill.overall
     SAILING("Sailing", 7, Skill.Overall),
-
     HITPOINTS("Hitpoints", 8, Skill.Hitpoints),
     PRAYER("Prayer", 9, Skill.Prayer),
     AGILITY("Agility", 10, Skill.Agility),
@@ -39,9 +29,8 @@ enum class LampSkill(
     HUNTER("Hunter", 25, Skill.Hunter);
 
     companion object {
-        fun fromDisplayNameOrDefault(name: String?, default: LampSkill): LampSkill {
-            if (name == null) return default
-            return values().firstOrNull { it.displayName.equals(name, ignoreCase = true) } ?: default
-        }
+        fun fromDisplayNameOrDefault(name: String?, default: LampSkill): LampSkill =
+            if (name == null) default
+            else entries.firstOrNull { it.displayName.equals(name, ignoreCase = true) } ?: default
     }
 }

@@ -4,71 +4,60 @@ import org.powbot.api.script.tree.Branch
 import org.powbot.api.script.tree.TreeComponent
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
+import InventoryUtils
 import org.thehappytyrannosaurusrex.api.utils.Logger
-import org.thehappytyrannosaurusrex.api.inventory.InventoryManagement
 
 class InventorySanityBranch(script: ArceuusLibrary) :
     Branch<ArceuusLibrary>(script, "Inventory sanity check") {
 
-    private val bookItemIds: Set<Int> = Books.allItemIds().toSet()
+    companion object {
+        private val GRACEFUL_NAMES = setOf(
+            "Graceful hood", "Graceful top", "Graceful legs",
+            "Graceful gloves", "Graceful boots", "Graceful cape"
+        )
 
-    private val gracefulNames: Set<String> = setOf(
-        "Graceful hood", "Graceful top", "Graceful legs",
-        "Graceful gloves", "Graceful boots", "Graceful cape"
-    )
+        private val STAMINA_PREFIXES = listOf("Stamina potion(")
 
-    private val staminaPrefixes = listOf("Stamina potion(")
+        private val TRAVEL_NAME_SNIPPETS = setOf(
+            "teleport", "xeric's talisman", "dramen staff"
+        )
 
-    // Centralised allow-list of travel items (by lowercased name)
-    private val travelNameSnippets = setOf(
-        "teleport",                      // any tab that contains "teleport"
-        "xeric's talisman",
-        "dramen staff"
-    )
-
-    private val travelRunes = setOf(
-        "Law rune", "Air rune", "Earth rune", "Water rune", "Fire rune",
-        "Dust rune", "Mist rune", "Mud rune", "Steam rune", "Smoke rune"
-    )
-
-    private fun isStaminaPotion(name: String): Boolean =
-        staminaPrefixes.any { name.startsWith(it, ignoreCase = true) }
-
-    private fun isGraceful(name: String): Boolean = gracefulNames.contains(name)
-
-    private fun isTravelAllowed(name: String): Boolean {
-        val allowTravel = script.shouldAllowTravelItems()
-        if (!allowTravel) return false
-        val lower = name.lowercase()
-        return travelNameSnippets.any { lower.contains(it) } || travelRunes.contains(name)
+        private val TRAVEL_RUNES = setOf(
+            "Law rune", "Air rune", "Earth rune", "Water rune", "Fire rune",
+            "Dust rune", "Mist rune", "Mud rune", "Steam rune", "Smoke rune"
+        )
     }
 
+    private val bookItemIds: Set<Int> = Books.allItemIds().toSet()
     private val depositLeaf = DepositInventoryAtBankLeaf(script)
     private val travelOrLibraryBranch = TravelOrLibraryBranch(script)
 
+    private fun isStaminaPotion(name: String): Boolean =
+        STAMINA_PREFIXES.any { name.startsWith(it, ignoreCase = true) }
+
+    private fun isGraceful(name: String): Boolean = name in GRACEFUL_NAMES
+
+    private fun isTravelAllowed(name: String): Boolean {
+        if (!script.shouldAllowTravelItems()) return false
+        val lower = name.lowercase()
+        return TRAVEL_NAME_SNIPPETS.any { lower.contains(it) } || name in TRAVEL_RUNES
+    }
+
     override fun validate(): Boolean {
-        val hasNonAllowedItems = InventoryManagement.hasNonAllowedItems(
-            allowedItemIds = bookItemIds, 
-            allowedByName = listOf<(String) -> Boolean>(
-                ::isGraceful,
-                ::isStaminaPotion,
-                { name -> isTravelAllowed(name) }
-            )
+        val hasNonAllowedItems = InventoryUtils.ById.hasNonAllowedItems(
+            allowedItemIds = bookItemIds,
+            allowedByName = listOf(::isGraceful, ::isStaminaPotion, ::isTravelAllowed)
         )
 
         if (hasNonAllowedItems) {
-            Logger.info(
-                "[Arceuus Library] LOGIC | Found non-allowed items; will bank " +
-                        "(travel items allowed=${script.shouldAllowTravelItems()})."
-            )
+            Logger.info("[Arceuus Library] LOGIC | Found non-allowed items; will bank.")
         }
         return hasNonAllowedItems
     }
 
     override val successComponent: TreeComponent<ArceuusLibrary>
-        get() = depositLeaf              // inventory “dirty” → bank
+        get() = depositLeaf
 
     override val failedComponent: TreeComponent<ArceuusLibrary>
-        get() = travelOrLibraryBranch    // inventory clean → travel vs inside
-
+        get() = travelOrLibraryBranch
 }

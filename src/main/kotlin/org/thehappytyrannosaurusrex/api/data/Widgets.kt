@@ -1,115 +1,93 @@
 package org.thehappytyrannosaurusrex.api.data
 
 import org.powbot.api.rt4.Component
-import org.powbot.api.rt4.Widget
 import org.powbot.api.rt4.Widgets
 
-data class WidgetRef(
-    val group: Int,
-    val path: IntArray
-) {
-    fun widget(): Widget = Widgets.widget(group)
-    fun component(): Component {
-        require(path.isNotEmpty()) { "WidgetRef path must contain at least one index" }
+object WidgetIds {
 
-        var comp: Component = widget().component(path[0])
+    // Generic helper to get a component
+    fun component(group: Int, vararg path: Int): Component {
+        require(path.isNotEmpty()) { "Path must contain at least one index" }
+        var comp = Widgets.widget(group).component(path[0])
         for (i in 1 until path.size) {
             comp = comp.component(path[i])
         }
         return comp
     }
-}
-
-object WidgetIds {
 
     object Chatbox {
-        val HEADER = WidgetRef(162, intArrayOf(1))
+        const val GROUP = 162
+        fun header(): Component = component(GROUP, 1)
     }
 
-    object InventoryResizable {
-        val ROOT = WidgetRef(149, intArrayOf(0))
+    object Inventory {
+        const val GROUP = 149
+        fun root(): Component = component(GROUP, 0)
     }
 
-    object SpellbookResizable {
-        val ROOT = WidgetRef(218, intArrayOf(0))
+    object Spellbook {
+        const val GROUP = 218
+        fun root(): Component = component(GROUP, 0)
     }
 
-    object CombatResizable {
-        val ROOT = WidgetRef(593, intArrayOf(0))
+    object Combat {
+        const val GROUP = 593
+        fun root(): Component = component(GROUP, 0)
     }
 
-    object ToplevelButtons {
-        val COMPASS = WidgetRef(601, intArrayOf(1))
-        val MINI_XP_STATS = WidgetRef(601, intArrayOf(3))
-        val CHAT_TOGGLE = WidgetRef(601, intArrayOf(46))
-        val SKILLS_TOGGLE = WidgetRef(601, intArrayOf(46))
+    object Toplevel {
+        const val GROUP = 601
+        fun compass(): Component = component(GROUP, 1)
+        fun miniXpStats(): Component = component(GROUP, 3)
+        fun chatToggle(): Component = component(GROUP, 46)
     }
 
-    object StatsWidget {
-        private const val GROUP = 320
-        private const val LVL_SUB_COMPONENT = 4
+    object Stats {
+        const val GROUP = 320
+        private const val LVL_SUB = 4
 
-        val ATTACK = WidgetRef(GROUP, intArrayOf(1))
-        val STRENGTH = WidgetRef(GROUP, intArrayOf(2))
-        val DEFENCE = WidgetRef(GROUP, intArrayOf(3))
-        val RANGE = WidgetRef(GROUP, intArrayOf(4))
-        val PRAYER = WidgetRef(GROUP, intArrayOf(5))
-        val MAGIC = WidgetRef(GROUP, intArrayOf(6))
-        val RUNECRAFTING = WidgetRef(GROUP, intArrayOf(7))
-        val CONSTRUCTION = WidgetRef(GROUP, intArrayOf(8))
-        val HITPOINTS = WidgetRef(GROUP, intArrayOf(9))
-        val AGILITY = WidgetRef(GROUP, intArrayOf(10))
-        val HERBLORE = WidgetRef(GROUP, intArrayOf(11))
-        val THIEVING = WidgetRef(GROUP, intArrayOf(12))
-        val CRAFTING = WidgetRef(GROUP, intArrayOf(13))
-        val FLETCHING = WidgetRef(GROUP, intArrayOf(14))
-        val SLAYER = WidgetRef(GROUP, intArrayOf(15))
-        val HUNTER = WidgetRef(GROUP, intArrayOf(16))
-        val MINING = WidgetRef(GROUP, intArrayOf(17))
-        val SMITHING = WidgetRef(GROUP, intArrayOf(18))
-        val FISHING = WidgetRef(GROUP, intArrayOf(19))
-        val COOKING = WidgetRef(GROUP, intArrayOf(20))
-        val FIREMAKING = WidgetRef(GROUP, intArrayOf(21))
-        val WOODCUTTING = WidgetRef(GROUP, intArrayOf(22))
-        val FARMING = WidgetRef(GROUP, intArrayOf(23))
-        val SAILING = WidgetRef(GROUP, intArrayOf(24))
-
-        fun levelComponent(ref: WidgetRef): Component =
-            ref.component().component(LVL_SUB_COMPONENT)
+        // Direct level component accessors
+        fun attackLvl(): Component = component(GROUP, 1, LVL_SUB)
+        fun strengthLvl(): Component = component(GROUP, 2, LVL_SUB)
+        fun defenceLvl(): Component = component(GROUP, 3, LVL_SUB)
+        fun rangeLvl(): Component = component(GROUP, 4, LVL_SUB)
+        fun prayerLvl(): Component = component(GROUP, 5, LVL_SUB)
+        fun magicLvl(): Component = component(GROUP, 6, LVL_SUB)
+        fun runecraftingLvl(): Component = component(GROUP, 7, LVL_SUB)
+        fun constructionLvl(): Component = component(GROUP, 8, LVL_SUB)
+        fun hitpointsLvl(): Component = component(GROUP, 9, LVL_SUB)
+        fun agilityLvl(): Component = component(GROUP, 10, LVL_SUB)
+        fun herbloreLvl(): Component = component(GROUP, 11, LVL_SUB)
+        fun thievingLvl(): Component = component(GROUP, 12, LVL_SUB)
+        fun craftingLvl(): Component = component(GROUP, 13, LVL_SUB)
+        fun fletchingLvl(): Component = component(GROUP, 14, LVL_SUB)
+        fun slayerLvl(): Component = component(GROUP, 15, LVL_SUB)
+        fun hunterLvl(): Component = component(GROUP, 16, LVL_SUB)
+        fun miningLvl(): Component = component(GROUP, 17, LVL_SUB)
+        fun smithingLvl(): Component = component(GROUP, 18, LVL_SUB)
+        fun fishingLvl(): Component = component(GROUP, 19, LVL_SUB)
+        fun cookingLvl(): Component = component(GROUP, 20, LVL_SUB)
+        fun firemakingLvl(): Component = component(GROUP, 21, LVL_SUB)
+        fun woodcuttingLvl(): Component = component(GROUP, 22, LVL_SUB)
+        fun farmingLvl(): Component = component(GROUP, 23, LVL_SUB)
+        fun sailingLvl(): Component = component(GROUP, 24, LVL_SUB)
     }
 
     object AntiqueLamp {
-        val ROOT = WidgetRef(240, intArrayOf(0))
-        val CONFIRM = WidgetRef(240, intArrayOf(27))
+        const val GROUP = 240
+        fun root(): Component = component(GROUP, 0)
+        fun confirm(): Component = component(GROUP, 27)
     }
 
-    // -------------------------------------------------------------------------
-    // Settings Widgets
-    // -------------------------------------------------------------------------
-
-    /**
-     * Settings tab button (opens "All Settings" panel).
-     * Widget 116, Component 32 — interact option: "All Settings"
-     */
-    object SettingsTab {
+    object Settings {
         const val GROUP = 116
-        val ALL_SETTINGS_BUTTON = WidgetRef(GROUP, intArrayOf(32))
+        fun allSettingsButton(): Component = component(GROUP, 32)
     }
 
-    /**
-     * Full "All Settings" panel that opens after clicking the All Settings button.
-     * Widget 134 — contains search bar and setting toggles.
-     */
-    object AllSettingsPanel {
+    object AllSettings {
         const val GROUP = 134
-
-        /** Close button — interact option: "Close" */
-        val CLOSE_BUTTON = WidgetRef(GROUP, intArrayOf(4))
-
-        /** Search bar — interact option: "Show keyboard" (or click to focus) */
-        val SEARCH_BAR = WidgetRef(GROUP, intArrayOf(11))
-
-        /** "Tap to drop items" toggle — interact option: "Toggle" */
-        val TAP_TO_DROP_TOGGLE = WidgetRef(GROUP, intArrayOf(167))
+        fun closeButton(): Component = component(GROUP, 4)
+        fun searchBar(): Component = component(GROUP, 11)
+        fun tapToDropToggle(): Component = component(GROUP, 167)
     }
 }

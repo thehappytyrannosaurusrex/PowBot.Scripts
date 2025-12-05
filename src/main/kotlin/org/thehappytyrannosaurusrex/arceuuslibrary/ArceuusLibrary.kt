@@ -10,7 +10,6 @@ import org.powbot.api.script.tree.TreeScript
 import org.powbot.dax.api.DaxWalker
 import org.thehappytyrannosaurusrex.arceuuslibrary.tree.RootBranch
 import org.thehappytyrannosaurusrex.api.ui.CameraController
-import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryDebugController
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.Config
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.Options
 import org.thehappytyrannosaurusrex.arceuuslibrary.config.XpType

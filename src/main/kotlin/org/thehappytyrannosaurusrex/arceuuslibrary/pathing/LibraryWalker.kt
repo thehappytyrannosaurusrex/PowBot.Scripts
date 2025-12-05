@@ -8,9 +8,12 @@ import org.thehappytyrannosaurusrex.api.utils.Logger
 
 object LibraryWalker {
 
+    private const val TAG = "PathWalker"
+
+    // Follow a computed path tile by tile
     fun followPath(path: List<Tile>, maxStepTimeoutMs: Int = 6000): Boolean {
         if (path.isEmpty()) {
-            Logger.warn("[PathWalker] Empty path, nothing to follow.")
+            Logger.warn("[$TAG] Empty path, nothing to follow.")
             return false
         }
 
@@ -19,7 +22,7 @@ object LibraryWalker {
         for ((index, target) in path.withIndex()) {
             val me = Players.local()
             if (!me.valid()) {
-                Logger.warn("[PathWalker] Local player invalid at step $index; aborting.")
+                Logger.warn("[$TAG] Local player invalid at step $index; aborting.")
                 return false
             }
 
@@ -28,19 +31,18 @@ object LibraryWalker {
 
             // Already close enough: skip step
             if (dist <= 1.0) {
-                Logger.info("[Arceuus Library] PATHING | Step $index/$lastIndex – already near $target " +
-                            "(dist=%.2f), skipping.".format(dist)
-                )
+                Logger.info("[$TAG] Step $index/$lastIndex – already near $target (dist=${"%.2f".format(dist)}), skipping.")
                 continue
             }
 
-            Logger.info("[Arceuus Library] PATHING | Step $index/$lastIndex – Movement.walkTo($target)")
+            Logger.info("[$TAG] Step $index/$lastIndex – Walking to $target")
+
             if (!Movement.walkTo(target)) {
-                Logger.warn("[PathWalker] Movement.walkTofailed at step $index ($target)")
+                Logger.warn("[$TAG] Movement.walkTo failed at step $index ($target)")
                 return false
             }
 
-            // Wait until get close enough or timeout
+            // Wait until close enough or timeout
             val attempts = maxStepTimeoutMs / 250
             val arrived = Condition.wait(
                 { Players.local().tile().distanceTo(target) <= 1 },
@@ -49,25 +51,23 @@ object LibraryWalker {
             )
 
             if (!arrived) {
-                Logger.warn("[PathWalker] Timed out walking to step $index ($target)")
+                Logger.warn("[$TAG] Timed out walking to step $index ($target)")
                 return false
             }
         }
 
-        Logger.info("[Arceuus Library] PATHING | Successfully followed path with ${path.size} steps.")
+        Logger.info("[$TAG] Successfully followed path with ${path.size} steps.")
         return true
     }
 
-    private fun compressPath(path: List<Tile>): List<Tile> {
+    // Compress path by removing redundant intermediate tiles
+    fun compressPath(path: List<Tile>): List<Tile> {
         if (path.size <= 2) return path
 
         val result = mutableListOf<Tile>()
         result += path.first()
 
-        var lastX = path[0].x
-        var lastY = path[0].y
         var lastFloor = path[0].floor
-
         var lastDx = path[1].x - path[0].x
         var lastDy = path[1].y - path[0].y
 
@@ -78,10 +78,7 @@ object LibraryWalker {
             val dx = next.x - cur.x
             val dy = next.y - cur.y
 
-            // Always keep floor changes as waypoints
             val floorChanged = cur.floor != lastFloor
-
-            // Direction changed: corner
             val directionChanged = dx != lastDx || dy != lastDy
 
             if (floorChanged || directionChanged) {
@@ -89,26 +86,22 @@ object LibraryWalker {
                 lastDx = dx
                 lastDy = dy
                 lastFloor = cur.floor
-                lastX = cur.x
-                lastY = cur.y
             }
         }
 
-        // Always keep final goal
         result += path.last()
-
         return result
     }
 
-    private fun coarseWaypoints(path: List<Tile>, maxClicks: Int = 4): List<Tile> {
+    // Reduce path to coarse waypoints for fewer clicks
+    fun coarseWaypoints(path: List<Tile>, maxClicks: Int = 4): List<Tile> {
         if (path.isEmpty()) return emptyList()
-        if (path.size <= maxClicks) return path  // short paths: click each tile
+        if (path.size <= maxClicks) return path
 
         val result = mutableListOf<Tile>()
         val lastIndex = path.lastIndex
-        val segments = maxClicks - 1 // number of segments between first and last
+        val segments = maxClicks - 1
 
-        // Evenly sample indices from 0..lastIndex inclusive
         for (i in 0..segments) {
             val idx = (i * lastIndex) / segments
             val tile = path[idx]
@@ -120,31 +113,29 @@ object LibraryWalker {
         return result
     }
 
+    // Debug helper: log path and attempt to walk
     fun debugFollowTo(target: Tile) {
         val me = Players.local()
         if (!me.valid()) {
-            Logger.warn("[PathWalker] Local player not valid; cannot debugFollowTo.")
+            Logger.warn("[$TAG] Local player not valid; cannot debugFollowTo.")
             return
         }
 
         val start = me.tile()
-        Logger.info("[Arceuus Library] PATHING | Debug follow from $start to $target")
+        Logger.info("[$TAG] Debug follow from $start to $target")
 
-        // Still compute the A* path for logging / sanity:
         val rawPath = LibraryPathfinder.findPath(start, target)
         if (rawPath == null) {
-            Logger.warn("[PathWalker] No A* path from $start to $target")
+            Logger.warn("[$TAG] No A* path from $start to $target")
         } else {
-            Logger.info("[Arceuus Library] PATHING | A* path has ${rawPath.size} tiles:")
+            Logger.info("[$TAG] A* path has ${rawPath.size} tiles:")
             rawPath.forEachIndexed { idx, t ->
-                Logger.info("[Arceuus Library] PATHING | #$idx -> $t")
+                Logger.info("[$TAG] #$idx -> $t")
             }
         }
 
-        // But let the web walker do the actual moving:
-        Logger.info("[Arceuus Library] PATHING | Calling Movement.walkTo($target)…")
-        val ok = Movement.walkTo(target) // or WebWalking.walkTo(...)
-        Logger.info("[Arceuus Library] PATHING | Movement.walkTo result: ${if (ok) "SUCCESS" else "FAILURE"}")
+        Logger.info("[$TAG] Calling Movement.walkTo($target)...")
+        val ok = Movement.walkTo(target)
+        Logger.info("[$TAG] Movement.walkTo result: ${if (ok) "SUCCESS" else "FAILURE"}")
     }
-
 }

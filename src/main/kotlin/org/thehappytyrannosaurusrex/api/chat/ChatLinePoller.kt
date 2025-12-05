@@ -1,6 +1,6 @@
 package org.thehappytyrannosaurusrex.api.chat
 
-import org.powbot.api.rt4.Chat
+import rt4.Chat
 
 /**
  * Small helper that reads the latest NPC / dialogue line from the PowBot Chat API

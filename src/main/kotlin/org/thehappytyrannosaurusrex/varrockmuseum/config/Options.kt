@@ -2,8 +2,8 @@ package org.thehappytyrannosaurusrex.varrockmuseum.config
 
 object Options {
     object Keys {
-        const val LAMP_SKILL = "Lamp skill"
-        const val KEEP_ITEMS = "Keep items"
+        const val LAMP_SKILL = "lampSkill"
+        const val KEEP_ITEMS = "keepItems"
     }
 
     object Values {

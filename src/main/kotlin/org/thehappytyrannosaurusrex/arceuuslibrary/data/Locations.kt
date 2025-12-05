@@ -1,171 +1,109 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.data
 
+import org.powbot.api.Area
 import org.powbot.api.Tile
 
-/**
- * Centralised tile, area and anchor definitions for the Arceuus Library.
- */
 object Locations {
 
-    // --- High level anchors / important tiles ---
+    // --- High level anchors ---
+    val LIBRARY_TILE = Tile(1632, 3804, 0)
+    val ARCEUUS_BANK_TILE = Tile(1629, 3746, 0)
 
-    /**
- * Rough centre of the Arceuus Library on the ground floor.
- */
-    val LIBRARY_TILE: Tile = Tile(1632, 3804, 0)
-
-    /**
- * Preferred Arceuus bank tile when banking from the library.
- */
-    val ARCEUUS_BANK_TILE: Tile = Tile(1629, 3746, 0)
-
-    // --- Logical areas inside the library ---
-
+    // --- Logical areas ---
     enum class Area { NORTHWEST, NORTHEAST, SOUTHWEST, CENTRAL, CORRIDOR, OUTSIDE }
 
-    private data class RectArea(
-        val x1: Int, val y1: Int,
-        val x2: Int, val y2: Int,
-        val floor: Int
-    ) {
-        private val minX = minOf(x1, x2)
-        private val maxX = maxOf(x1, x2)
-        private val minY = minOf(y1, y2)
-        private val maxY = maxOf(y1, y2)
+    // --- Floor 0 (Ground floor) ---
+    private val SW_GROUND = Area(Tile(1607, 3784, 0), Tile(1626, 3801, 0))
+    private val NW_GROUND = Area(Tile(1607, 3814, 0), Tile(1626, 3831, 0))
+    private val NE_GROUND = Area(Tile(1639, 3814, 0), Tile(1658, 3831, 0))
+    private val CENTRAL_GROUND = Area(Tile(1622, 3797, 0), Tile(1643, 3818, 0))
 
-        fun contains(t: Tile): Boolean =
-            t.floor == floor && t.x in minX..maxX && t.y in minY..maxY
-    }
+    // --- Floor 1 (First floor) ---
+    private val SW_FIRST = Area(Tile(1607, 3784, 1), Tile(1624, 3799, 1))
+    private val NW_FIRST = Area(Tile(1607, 3816, 1), Tile(1624, 3831, 1))
+    private val NE_FIRST = Area(Tile(1641, 3814, 1), Tile(1658, 3831, 1))
+    private val CENTRAL_FIRST = Area(Tile(1625, 3800, 1), Tile(1640, 3815, 1))
 
-    /**
- * High-level metadata for each WorkArea:
- */
-    data class WorkAreaInfo(
-        val workArea: WorkArea,
-        val anchor: Tile,
-        val shelves: List<Bookshelf>
-    )
+    // --- Floor 2 (Second floor) ---
+    private val SW_SECOND = Area(Tile(1607, 3784, 2), Tile(1624, 3799, 2))
+    private val NW_SECOND = Area(Tile(1607, 3816, 2), Tile(1624, 3831, 2))
+    private val NE_SECOND = Area(Tile(1641, 3816, 2), Tile(1658, 3831, 2))
+    private val CENTRAL_SECOND = Area(Tile(1625, 3800, 2), Tile(1640, 3815, 2))
 
-    // -----------------------------
-    // Floor 0 (Ground floor)
-    // -----------------------------
-    private val SW_GROUND = RectArea(1607, 3784, 1626, 3801, 0)
-    private val NW_GROUND = RectArea(1607, 3814, 1626, 3831, 0)
-    private val NE_GROUND = RectArea(1639, 3814, 1658, 3831, 0)
-    // Central Building (Overlaps)
-    private val CENTRAL_GROUND = RectArea(1622, 3797, 1643, 3818, 0)
+    // --- Corridors (Second floor only) ---
+    private val CORRIDOR_NWSW = Area(Tile(1613, 3800, 2), Tile(1616, 3815, 2))
+    private val CORRIDOR_NWSW_CENTRAL = Area(Tile(1617, 3807, 2), Tile(1625, 3808, 2))
+    private val CORRIDOR_NWNE = Area(Tile(1625, 3823, 2), Tile(1640, 3826, 2))
+    private val CORRIDOR_NWNE_CENTRAL = Area(Tile(1632, 3816, 2), Tile(1633, 3822, 2))
 
-    // -----------------------------
-    // Floor 1 (First floor)
-    // -----------------------------
-    private val SW_FIRST = RectArea(1607, 3784, 1624, 3799, 1)
-    private val NW_FIRST = RectArea(1607, 3816, 1624, 3831, 1)
-    private val NE_FIRST = RectArea(1641, 3814, 1658, 3831, 1)
-    // Custom central for 1st floor
-    private val CENTRAL_FIRST = RectArea(1625, 3800, 1640, 3815, 1)
-
-    // -----------------------------
-    // Floor 2 (Second floor)
-    // -----------------------------
-    private val SW_SECOND = RectArea(1607, 3784, 1624, 3799, 2)
-    private val NW_SECOND = RectArea(1607, 3816, 1624, 3831, 2)
-    private val NE_SECOND = RectArea(1641, 3816, 1658, 3831, 2)
-    // Custom central for 2nd floor
-    private val CENTRAL_SECOND = RectArea(1625, 3800, 1640, 3815, 2)
-
-    // ----------------------------
-    // Connecting corridors (Second floor only)
-    // ----------------------------
-
-    // Corridor that connects the Northwest and Southwest areas of the second floor
-    private val CORRIDOR_NWSW = RectArea(1613, 3800, 1616, 3815, 2)
-    // Corridor that connects that corridor to the central room
-    private val CORRIDOR_NWSW_CENTRAL = RectArea(1617, 3807, 1625, 3808, 2)
-
-    // Corridor that connects the Northwest and Northeast areas of the second floor
-    private val CORRIDOR_NWNE = RectArea(1625, 3823, 1640, 3826, 2)
-    // Corridor that connects that corridor to the central room
-    private val CORRIDOR_NWNE_CENTRAL = RectArea(1632, 3816, 1633, 3822, 2)
-
-    // -----------------------------
-    // Floor 0 (Ground floor) Anchor tiles
-    // -----------------------------
+    // --- Anchor tiles by floor ---
     val SW_GROUND_ANCHOR = Tile(1619, 3796, 0)
     val NW_GROUND_ANCHOR = Tile(1620, 3818, 0)
     val NE_GROUND_ANCHOR = Tile(1645, 3817, 0)
     val CENTRAL_GROUND_ANCHOR = LIBRARY_TILE
 
-    // -----------------------------
-    // Floor 1 (First floor) Anchor tiles
-    // -----------------------------
     val SW_FIRST_ANCHOR = Tile(1617, 3792, 1)
     val NW_FIRST_ANCHOR = Tile(1617, 3828, 1)
     val NE_FIRST_ANCHOR = Tile(1650, 3825, 1)
     val CENTRAL_FIRST_ANCHOR = Tile(1638, 3813, 1)
 
-    // -----------------------------
-    // Floor 2 (Second floor) Anchor tiles
-    // -----------------------------
     val SW_SECOND_ANCHOR = Tile(1615, 3796, 2)
     val NW_SECOND_ANCHOR = Tile(1613, 3824, 2)
     val NE_SECOND_ANCHOR = Tile(1645, 3826, 2)
     val CENTRAL_SECOND_ANCHOR = Tile(1634, 3802, 2)
 
-    // NPC Anchor tiles (ground floor)
+    // --- NPC anchors (ground floor) ---
     val NPC_SAM_ANCHOR = Tile(1639, 3801, 0)
     val NPC_PROFESSOR_ANCHOR = Tile(1625, 3801, 0)
     val NPC_VILLIA_ANCHOR = Tile(1626, 3814, 0)
 
-    // -----------------------------
-    // Area lookup by floor
-    // -----------------------------
-    private val areasByFloor: Map<Int, List<Pair<Area, RectArea>>> = mapOf(
+    // --- Area lookup by floor ---
+    private data class FloorArea(val area: Area, val bounds: org.powbot.api.Area)
+
+    private val areasByFloor: Map<Int, List<FloorArea>> = mapOf(
         0 to listOf(
-            Area.CENTRAL   to CENTRAL_GROUND,
-            Area.SOUTHWEST to SW_GROUND,
-            Area.NORTHWEST to NW_GROUND,
-            Area.NORTHEAST to NE_GROUND,
+            FloorArea(Area.CENTRAL, CENTRAL_GROUND),
+            FloorArea(Area.SOUTHWEST, SW_GROUND),
+            FloorArea(Area.NORTHWEST, NW_GROUND),
+            FloorArea(Area.NORTHEAST, NE_GROUND)
         ),
         1 to listOf(
-            Area.CENTRAL   to CENTRAL_FIRST,
-            Area.SOUTHWEST to SW_FIRST,
-            Area.NORTHWEST to NW_FIRST,
-            Area.NORTHEAST to NE_FIRST,
+            FloorArea(Area.CENTRAL, CENTRAL_FIRST),
+            FloorArea(Area.SOUTHWEST, SW_FIRST),
+            FloorArea(Area.NORTHWEST, NW_FIRST),
+            FloorArea(Area.NORTHEAST, NE_FIRST)
         ),
         2 to listOf(
-            Area.CENTRAL   to CENTRAL_SECOND,
-            Area.SOUTHWEST to SW_SECOND,
-            Area.NORTHWEST to NW_SECOND,
-            Area.NORTHEAST to NE_SECOND,
-            Area.CORRIDOR  to CORRIDOR_NWSW,
-            Area.CORRIDOR  to CORRIDOR_NWSW_CENTRAL,
-            Area.CORRIDOR  to CORRIDOR_NWNE,
-            Area.CORRIDOR  to CORRIDOR_NWNE_CENTRAL,
+            FloorArea(Area.CENTRAL, CENTRAL_SECOND),
+            FloorArea(Area.SOUTHWEST, SW_SECOND),
+            FloorArea(Area.NORTHWEST, NW_SECOND),
+            FloorArea(Area.NORTHEAST, NE_SECOND),
+            FloorArea(Area.CORRIDOR, CORRIDOR_NWSW),
+            FloorArea(Area.CORRIDOR, CORRIDOR_NWSW_CENTRAL),
+            FloorArea(Area.CORRIDOR, CORRIDOR_NWNE),
+            FloorArea(Area.CORRIDOR, CORRIDOR_NWNE_CENTRAL)
         )
     )
 
-    // --- Convenience accessors / helpers ---
+    // --- Helpers ---
 
-    val libraryTile: Tile
-        get() = LIBRARY_TILE
-
-    val libraryCenter: Tile
-        get() = LIBRARY_TILE
+    val libraryTile: Tile get() = LIBRARY_TILE
+    val libraryCenter: Tile get() = LIBRARY_TILE
 
     fun isInsideLibrary(tile: Tile): Boolean = area(tile) != Area.OUTSIDE
 
     fun area(tile: Tile): Area {
         val floorAreas = areasByFloor[tile.floor] ?: return Area.OUTSIDE
-        return floorAreas.firstOrNull { it.second.contains(tile) }?.first ?: Area.OUTSIDE
+        return floorAreas.firstOrNull { it.bounds.contains(tile) }?.area ?: Area.OUTSIDE
     }
 
     fun areaName(tile: Tile): String = when (area(tile)) {
         Area.NORTHWEST -> "Northwest"
         Area.NORTHEAST -> "Northeast"
         Area.SOUTHWEST -> "Southwest"
-        Area.CENTRAL   -> "Central"
-        Area.OUTSIDE   -> "Outside"
-        Area.CORRIDOR  -> "Corridor"
+        Area.CENTRAL -> "Central"
+        Area.CORRIDOR -> "Corridor"
+        Area.OUTSIDE -> "Outside"
     }
 
     fun floorName(floor: Int): String = when (floor) {
@@ -181,20 +119,9 @@ object Locations {
         else "${areaName(tile)} Library, ${floorName(tile.floor)}"
     }
 
-    /**
- * Returns true if the two tiles are in different logical areas
- */
     fun isDifferentAreaOrFloor(from: Tile?, to: Tile): Boolean {
         if (from == null) return true
         return area(from) != area(to) || from.floor != to.floor
-    }
-
-    // Optional helper if need the central rectangle directly
-    private fun centralArea(floor: Int): RectArea? = when (floor) {
-        0 -> CENTRAL_GROUND
-        1 -> CENTRAL_FIRST
-        2 -> CENTRAL_SECOND
-        else -> null
     }
 
     fun isAtLibrary(tile: Tile, radius: Int = 3): Boolean =
@@ -203,54 +130,31 @@ object Locations {
     fun isAtBank(tile: Tile, radius: Int = 8): Boolean =
         tile.distanceTo(ARCEUUS_BANK_TILE) <= radius
 
-
-    /**
- * Mapping from high-level WorkArea enum to the underlying anchor tile and
- */
-    val workAreas: Map<WorkArea, WorkAreaInfo> by lazy {
-        mapOf(
-            WorkArea.SW_GROUND to WorkAreaInfo(
-                workArea = WorkArea.SW_GROUND,
-                anchor = SW_GROUND_ANCHOR,
-                shelves = Bookshelves.ALL.filter {
-                    it.floor == 0 && it.area == Area.SOUTHWEST
-                }
-            ),
-            WorkArea.CENTRAL_GROUND to WorkAreaInfo(
-                workArea = WorkArea.CENTRAL_GROUND,
-                anchor = LIBRARY_TILE,
-                shelves = Bookshelves.ALL.filter {
-                    it.floor == 0 && it.area == Area.CENTRAL
-                }
-            ),
-            WorkArea.NW_GROUND to WorkAreaInfo(
-                workArea = WorkArea.NW_GROUND,
-                anchor = NW_GROUND_ANCHOR,
-                shelves = Bookshelves.ALL.filter {
-                    it.floor == 0 && it.area == Area.NORTHWEST
-                }
-            ),
-            WorkArea.NE_GROUND to WorkAreaInfo(
-                workArea = WorkArea.NE_GROUND,
-                anchor = NE_GROUND_ANCHOR,
-                shelves = Bookshelves.ALL.filter {
-                    it.floor == 0 && it.area == Area.NORTHEAST
-                }
-            )
-        )
+    fun anchorFor(area: Area, floor: Int): Tile? = when {
+        area == Area.SOUTHWEST && floor == 0 -> SW_GROUND_ANCHOR
+        area == Area.NORTHWEST && floor == 0 -> NW_GROUND_ANCHOR
+        area == Area.NORTHEAST && floor == 0 -> NE_GROUND_ANCHOR
+        area == Area.CENTRAL && floor == 0 -> CENTRAL_GROUND_ANCHOR
+        area == Area.SOUTHWEST && floor == 1 -> SW_FIRST_ANCHOR
+        area == Area.NORTHWEST && floor == 1 -> NW_FIRST_ANCHOR
+        area == Area.NORTHEAST && floor == 1 -> NE_FIRST_ANCHOR
+        area == Area.CENTRAL && floor == 1 -> CENTRAL_FIRST_ANCHOR
+        area == Area.SOUTHWEST && floor == 2 -> SW_SECOND_ANCHOR
+        area == Area.NORTHWEST && floor == 2 -> NW_SECOND_ANCHOR
+        area == Area.NORTHEAST && floor == 2 -> NE_SECOND_ANCHOR
+        area == Area.CENTRAL && floor == 2 -> CENTRAL_SECOND_ANCHOR
+        else -> null
     }
 
-    fun workAreaInfo(area: WorkArea): WorkAreaInfo? =
-        workAreas[area]
+    fun shelvesInArea(area: Area, floor: Int): List<Bookshelf> =
+        Bookshelves.ALL.filter { it.area == area && it.floor == floor }
 
-    fun shelvesForWorkArea(area: WorkArea): List<Bookshelf> =
-        workAreas[area]?.shelves ?: emptyList()
+    fun orderedShelvesForArea(area: Area, floor: Int, from: Tile): List<Bookshelf> =
+        shelvesInArea(area, floor).sortedBy { it.standingTile.distanceTo(from) }
 
-    /**
- * Simple helper for future SolveAreaLeaf: given a WorkArea and a
- */
-    fun orderedShelvesForArea(area: WorkArea, from: Tile): List<Bookshelf> =
-        shelvesForWorkArea(area)
-            .sortedBy { shelf -> shelf.standingTile.distanceTo(from) }
-
+    // Get PowBot Area bounds for a logical area on a floor
+    fun boundsFor(area: Area, floor: Int): org.powbot.api.Area? {
+        val floorAreas = areasByFloor[floor] ?: return null
+        return floorAreas.firstOrNull { it.area == area }?.bounds
+    }
 }

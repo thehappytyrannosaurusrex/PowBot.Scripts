@@ -2,54 +2,30 @@ package org.thehappytyrannosaurusrex.api.data
 
 import org.powbot.api.rt4.Component
 
+// Simple accessors for stat level components
 object PlayerStats {
-
-    val ATTACK_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.ATTACK)
-    val STRENGTH_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.STRENGTH)
-    val DEFENCE_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.DEFENCE)
-    val RANGE_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.RANGE)
-    val PRAYER_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.PRAYER)
-    val MAGIC_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.MAGIC)
-    val RUNECRAFTING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.RUNECRAFTING)
-    val CONSTRUCTION_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.CONSTRUCTION)
-    val HITPOINTS_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.HITPOINTS)
-    val AGILITY_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.AGILITY)
-    val HERBLORE_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.HERBLORE)
-    val THIEVING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.THIEVING)
-    val CRAFTING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.CRAFTING)
-    val FLETCHING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.FLETCHING)
-    val SLAYER_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.SLAYER)
-    val HUNTER_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.HUNTER)
-    val MINING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.MINING)
-    val SMITHING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.SMITHING)
-    val FISHING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.FISHING)
-    val COOKING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.COOKING)
-    val FIREMAKING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.FIREMAKING)
-    val WOODCUTTING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.WOODCUTTING)
-    val FARMING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.FARMING)
-    val SAILING_LVL: Component
-        get() = WidgetIds.StatsWidget.levelComponent(WidgetIds.StatsWidget.SAILING)
+    fun attackLvl(): Component = WidgetIds.Stats.attackLvl()
+    fun strengthLvl(): Component = WidgetIds.Stats.strengthLvl()
+    fun defenceLvl(): Component = WidgetIds.Stats.defenceLvl()
+    fun rangeLvl(): Component = WidgetIds.Stats.rangeLvl()
+    fun prayerLvl(): Component = WidgetIds.Stats.prayerLvl()
+    fun magicLvl(): Component = WidgetIds.Stats.magicLvl()
+    fun runecraftingLvl(): Component = WidgetIds.Stats.runecraftingLvl()
+    fun constructionLvl(): Component = WidgetIds.Stats.constructionLvl()
+    fun hitpointsLvl(): Component = WidgetIds.Stats.hitpointsLvl()
+    fun agilityLvl(): Component = WidgetIds.Stats.agilityLvl()
+    fun herbloreLvl(): Component = WidgetIds.Stats.herbloreLvl()
+    fun thievingLvl(): Component = WidgetIds.Stats.thievingLvl()
+    fun craftingLvl(): Component = WidgetIds.Stats.craftingLvl()
+    fun fletchingLvl(): Component = WidgetIds.Stats.fletchingLvl()
+    fun slayerLvl(): Component = WidgetIds.Stats.slayerLvl()
+    fun hunterLvl(): Component = WidgetIds.Stats.hunterLvl()
+    fun miningLvl(): Component = WidgetIds.Stats.miningLvl()
+    fun smithingLvl(): Component = WidgetIds.Stats.smithingLvl()
+    fun fishingLvl(): Component = WidgetIds.Stats.fishingLvl()
+    fun cookingLvl(): Component = WidgetIds.Stats.cookingLvl()
+    fun firemakingLvl(): Component = WidgetIds.Stats.firemakingLvl()
+    fun woodcuttingLvl(): Component = WidgetIds.Stats.woodcuttingLvl()
+    fun farmingLvl(): Component = WidgetIds.Stats.farmingLvl()
+    fun sailingLvl(): Component = WidgetIds.Stats.sailingLvl()
 }

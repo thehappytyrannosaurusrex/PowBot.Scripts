@@ -3,8 +3,10 @@ package org.thehappytyrannosaurusrex.api.utils
 import org.powbot.api.Tile
 import org.powbot.api.rt4.Bank
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Item
 import org.powbot.api.rt4.Movement
 import org.powbot.api.rt4.Players
+import org.thehappytyrannosaurusrex.api.utils.InteractionUtils.findInvItem
 
 object BankUtils {
 
@@ -13,73 +15,105 @@ object BankUtils {
         maxPreferredDistance: Double = 200.0,
         logPrefix: String = "[Bank]"
     ): Boolean {
-        return depositToNearestBankInternal(
-            preferredBankTile = preferredBankTile,
-            maxPreferredDistance = maxPreferredDistance,
-            logPrefix = logPrefix
-        ) {
+        return depositToNearestBankInternal(preferredBankTile, maxPreferredDistance, logPrefix) {
             if (Inventory.isNotEmpty()) {
                 Logger.info("$logPrefix Depositing full inventory.")
                 Bank.depositInventory()
             } else {
-                Logger.info("$logPrefix Inventory already empty; nothing to deposit.")
+                Logger.info("$logPrefix Inventory already empty.")
             }
         }
     }
 
-    /**
- * Walks to the nearest bank and deposits everything except [keepItemIds].
- */
+    // Deposit all except specified IDs (primary method - matches PowBot API)
     fun depositAllExceptToNearestBank(
         keepItemIds: IntArray,
         preferredBankTile: Tile? = null,
         maxPreferredDistance: Double = 200.0,
         logPrefix: String = "[Bank]"
     ): Boolean {
-        return depositToNearestBankInternal(
-            preferredBankTile = preferredBankTile,
-            maxPreferredDistance = maxPreferredDistance,
-            logPrefix = logPrefix
-        ) {
+        return depositToNearestBankInternal(preferredBankTile, maxPreferredDistance, logPrefix) {
             if (Inventory.isNotEmpty()) {
-                Logger.info(
-                    "$logPrefix Depositing all except " +
-                            keepItemIds.joinToString(prefix = "[", postfix = "]")
-                )
+                Logger.info("$logPrefix Depositing all except ${keepItemIds.toList()}")
                 Bank.depositAllExcept(*keepItemIds)
             } else {
-                Logger.info("$logPrefix Inventory already empty; nothing to deposit.")
+                Logger.info("$logPrefix Inventory already empty.")
             }
         }
     }
 
-    /**
- * Shared guts: get to a bank + open it, then run [depositAction].
- */
+    // Deposit all except specified names (String-based convenience)
+    fun depositAllExceptByName(
+        keepItemNames: Set<String>,
+        preferredBankTile: Tile? = null,
+        maxPreferredDistance: Double = 200.0,
+        logPrefix: String = "[Bank]"
+    ): Boolean {
+        return depositToNearestBankInternal(preferredBankTile, maxPreferredDistance, logPrefix) {
+            if (Inventory.isNotEmpty()) {
+                val normalizedKeep = keepItemNames.map { it.lowercase().trim() }.toSet()
+                Logger.info("$logPrefix Depositing all except: $keepItemNames")
+
+                Inventory.stream()
+                    .filter { it.valid() && it.name().lowercase().trim() !in normalizedKeep }
+                    .forEach { item ->
+                        Bank.deposit(item.id(), Bank.Amount.ALL)
+                    }
+            } else {
+                Logger.info("$logPrefix Inventory already empty.")
+            }
+        }
+    }
+
+
+
+    // Withdraw item by ID
+    fun withdrawItemById(id: Int, amount: Int = 1): Boolean {
+        if (!Bank.opened()) return false
+        return Bank.withdraw(id, amount)
+    }
+
+    // Check if bank has item
+    fun hasBankItem(name: String): Boolean = Bank.stream().name(name).isNotEmpty()
+    fun hasBankItemById(id: Int): Boolean = Bank.stream().id(id).isNotEmpty()
+    fun findBankItem(name: String): Item = Bank.stream().name(name).first()
+
+    // Withdraw item by name
+    fun withdrawItem(name: String, amount: Int = 1): Boolean {
+        if (!Bank.opened()) return false
+        val item = findBankItem(name)
+        if (!item.valid()) return false
+        return Bank.withdraw(item, amount)
+    }
+
+    fun depositInvItem(name: String, amount: Int = -1): Boolean {
+        if (!Bank.opened()) return false
+        val item = findInvItem(name)
+        if (!item.valid()) return false
+        return if (amount == -1) Bank.deposit(item, Bank.Amount.ALL) else Bank.deposit(item, amount)
+    }
+
+    // Internal: handles walking to bank and opening
     private fun depositToNearestBankInternal(
         preferredBankTile: Tile?,
-        maxPreferredDistance: Double, // kept for backwards compat; no longer used
+        maxPreferredDistance: Double,
         logPrefix: String,
         depositAction: () -> Unit
     ): Boolean {
-
         if (Inventory.isEmpty()) {
             Logger.info("$logPrefix Inventory empty; nothing to deposit.")
             return true
         }
 
-        // If can see a bank, open it and dump inventory.
         if (Bank.present()) {
             if (!Bank.opened()) {
                 Logger.info("$logPrefix Bank nearby; opening.")
                 Bank.open()
             }
-
             if (!Bank.opened()) {
                 Logger.info("$logPrefix Failed to open bank.")
                 return false
             }
-
             depositAction()
             return true
         }
@@ -87,17 +121,15 @@ object BankUtils {
         val local = Players.local()
         if (preferredBankTile != null && local.valid()) {
             val dist = local.tile().distanceTo(preferredBankTile)
-            Logger.info(
-                "$logPrefix Walking to preferred bank tile $preferredBankTile " +
-                        "(dist=${"%.1f".format(dist)})."
-            )
-            Movement.moveTo(preferredBankTile)
-            return false
+            if (dist <= maxPreferredDistance) {
+                Logger.info("$logPrefix Walking to preferred bank tile $preferredBankTile (dist=${"%.1f".format(dist)}).")
+                Movement.moveTo(preferredBankTile)
+                return false
+            }
         }
 
-        Logger.info("$logPrefix No preferred bank tile specified; using Movement.moveToBank().")
+        Logger.info("$logPrefix No preferred bank tile nearby; using Movement.moveToBank().")
         Movement.moveToBank()
         return false
     }
-
 }

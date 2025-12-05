@@ -1,120 +1,160 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.pathing
 
-import kotlin.random.Random
 import org.powbot.api.Tile
-import org.thehappytyrannosaurusrex.arceuuslibrary.data.Bookshelves
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations
+import org.thehappytyrannosaurusrex.arceuuslibrary.data.StairLanding
 import org.thehappytyrannosaurusrex.api.utils.Logger
+import java.util.PriorityQueue
+import kotlin.math.abs
 
 object LibraryPathfinder {
 
-    fun findPath(start: Tile, goal: Tile, maxNodes: Int = 20_000): List<Tile>? {
-        val startNav = NavTile.from(start)
-        val goalNav = NavTile.from(goal)
+    private const val TAG = "Pathfinder"
+    private const val MAX_ITERATIONS = 5000
 
-        // For safety: only path inside the library.
-        if (!LibraryNav.inLibrary(startNav)) {
-            Logger.warn("[Pathfinder] Start tile $start is outside library; aborting A*.")
-            return null
-        }
-        if (!LibraryNav.inLibrary(goalNav)) {
-            Logger.warn("[Pathfinder] Goal tile $goal is outside library; aborting A*.")
-            return null
-        }
-
-        // If the goal is not walkable, don't even try.
-        if (!LibraryNav.isWalkable(goalNav)) {
-            Logger.warn("[Pathfinder] Goal tile $goal is not walkable; aborting A*.")
-            return null
-        }
-
-        if (startNav == goalNav) {
-            return listOf(start)
-        }
-
-        val navPath = findPath(startNav, goalNav, maxNodes) ?: return null
-        return navPath.map { it.toTile() }
+    // A* node for priority queue
+    private data class Node(
+        val tile: Tile,
+        val gCost: Int,      // Cost from start
+        val hCost: Int,      // Heuristic to goal
+        val parent: Node?
+    ) : Comparable<Node> {
+        val fCost: Int get() = gCost + hCost
+        override fun compareTo(other: Node): Int = fCost.compareTo(other.fCost)
     }
 
-    private fun findPath(start: NavTile, goal: NavTile, maxNodes: Int): List<NavTile>? {
-        // Node for the priority queue
-        data class Node(val nav: NavTile, val f: Int, val h: Int)
+    // Find path using A* algorithm
+    fun findPath(start: Tile, goal: Tile): List<Tile>? {
+        if (start == goal) return listOf(start)
 
-        // Open set: frontier of nodes to explore, ordered by f = g + h
-        val open = java.util.PriorityQueue<Node>(compareBy<Node> { it.f }.thenBy { it.h })
-
-        // Closed set: nodes 've fully explored
-        val closed = mutableSetOf<NavTile>()
-
-        // Best known cost from start to each node
-        val gScore = mutableMapOf<NavTile, Int>().apply {
-            this[start] = 0
+        // Different floors require stair traversal
+        if (start.floor != goal.floor) {
+            return findPathAcrossFloors(start, goal)
         }
 
-        // Parent pointers for path reconstruction
-        val cameFrom = mutableMapOf<NavTile, NavTile>()
+        return findPathSameFloor(start, goal)
+    }
 
-        val h0 = LibraryHeuristic.estimate(start, goal)
-        open.add(Node(start, f = h0, h = h0))
+    // A* on a single floor
+    private fun findPathSameFloor(start: Tile, goal: Tile): List<Tile>? {
+        val openSet = PriorityQueue<Node>()
+        val closedSet = mutableSetOf<Tile>()
+        val gScores = mutableMapOf<Tile, Int>()
 
-        var expanded = 0
+        val startNode = Node(start, 0, heuristic(start, goal), null)
+        openSet.add(startNode)
+        gScores[start] = 0
 
-        while (open.isNotEmpty()) {
-            if (expanded++ > maxNodes) {
-                Logger.warn("[Pathfinder] Aborting A* after expanding $expanded nodes (limit $maxNodes).")
-                return null
+        var iterations = 0
+
+        while (openSet.isNotEmpty() && iterations < MAX_ITERATIONS) {
+            iterations++
+            val current = openSet.poll()
+
+            if (current.tile == goal) {
+                return reconstructPath(current)
             }
 
-            val currentNode = open.poll()
-            val current = currentNode.nav
+            if (current.tile in closedSet) continue
+            closedSet.add(current.tile)
 
-            if (current == goal) {
-                return reconstructPath(cameFrom, current)
-            }
+            for (neighbor in getNeighbors(current.tile)) {
+                if (neighbor in closedSet) continue
+                if (!isWalkable(neighbor)) continue
 
-            if (!closed.add(current)) {
-                // Already processed with an equal or better gScore.
-                continue
-            }
+                val tentativeG = current.gCost + moveCost(current.tile, neighbor)
 
-            val currentG = gScore[current] ?: Int.MAX_VALUE
-
-            for ((neighbour, stepCost) in LibraryNav.neighboursOf(current)) {
-                if (neighbour in closed) continue
-
-                val tentativeG = currentG + stepCost
-                val oldG = gScore[neighbour] ?: Int.MAX_VALUE
-                if (tentativeG >= oldG) {
-                    continue
+                if (tentativeG < (gScores[neighbor] ?: Int.MAX_VALUE)) {
+                    gScores[neighbor] = tentativeG
+                    val neighborNode = Node(neighbor, tentativeG, heuristic(neighbor, goal), current)
+                    openSet.add(neighborNode)
                 }
-
-                // Path to neighbour is better than any previous one.
-                cameFrom[neighbour] = current
-                gScore[neighbour] = tentativeG
-
-                val h = LibraryHeuristic.estimate(neighbour, goal)
-                val f = tentativeG + h
-                open.add(Node(neighbour, f = f, h = h))
             }
         }
 
-        // No path found
-        Logger.info("[Arceuus Library] PATHING | No path found from $start to $goal.")
+        Logger.warn("[$TAG] No path found from $start to $goal after $iterations iterations")
         return null
     }
 
-    private fun reconstructPath(
-        cameFrom: Map<NavTile, NavTile>,
-        goal: NavTile
-    ): List<NavTile> {
-        val path = mutableListOf<NavTile>()
-        var current: NavTile? = goal
+    // Path across multiple floors using stairs
+    private fun findPathAcrossFloors(start: Tile, goal: Tile): List<Tile>? {
+        // Find stairs on start floor that go toward goal floor
+        val startFloorStairs = StairLanding.stairTilesOnFloor(start.floor)
+        val goalFloorStairs = StairLanding.stairTilesOnFloor(goal.floor)
 
-        while (current != null) {
-            path += current
-            current = cameFrom[current]
+        if (startFloorStairs.isEmpty() || goalFloorStairs.isEmpty()) {
+            Logger.warn("[$TAG] No stair connections between floors ${start.floor} and ${goal.floor}")
+            return null
         }
 
-        path.reverse()
+        // Simple approach: find best stair on each floor
+        val bestStartStair = startFloorStairs.minByOrNull { heuristic(start, it) + heuristic(it, goal) }
+        val stairLink = bestStartStair?.let { StairLanding.from(it).firstOrNull { link -> link.to.floor == goal.floor || link.changesFloor } }
+
+        if (bestStartStair == null || stairLink == null) {
+            Logger.warn("[$TAG] Cannot find valid stair route from floor ${start.floor} to ${goal.floor}")
+            return null
+        }
+
+        // Build path: start -> stair entry -> stair exit -> goal
+        val pathToStair = findPathSameFloor(start, bestStartStair) ?: return null
+        val pathFromStair = findPathSameFloor(stairLink.to, goal) ?: findPathAcrossFloors(stairLink.to, goal) ?: return null
+
+        return pathToStair + pathFromStair
+    }
+
+    // Get walkable neighbors (4-directional + stairs)
+    private fun getNeighbors(tile: Tile): List<Tile> {
+        val neighbors = mutableListOf<Tile>()
+
+        // Cardinal directions
+        neighbors.add(Tile(tile.x + 1, tile.y, tile.floor))
+        neighbors.add(Tile(tile.x - 1, tile.y, tile.floor))
+        neighbors.add(Tile(tile.x, tile.y + 1, tile.floor))
+        neighbors.add(Tile(tile.x, tile.y - 1, tile.floor))
+
+        // Stair connections
+        neighbors.addAll(StairLanding.targetsFrom(tile))
+
+        return neighbors
+    }
+
+    // Check if tile is walkable (within library bounds)
+    private fun isWalkable(tile: Tile): Boolean {
+        return Locations.isInsideLibrary(tile)
+    }
+
+    // Movement cost between adjacent tiles
+    private fun moveCost(from: Tile, to: Tile): Int {
+        // Stair transitions cost more
+        if (from.floor != to.floor) return 5
+        return 1
+    }
+
+    // Manhattan distance heuristic
+    private fun heuristic(a: Tile, b: Tile): Int {
+        val dx = abs(a.x - b.x)
+        val dy = abs(a.y - b.y)
+        val dFloor = abs(a.floor - b.floor) * 10 // Floor changes are expensive
+        return dx + dy + dFloor
+    }
+
+    // Reconstruct path from goal node
+    private fun reconstructPath(goalNode: Node): List<Tile> {
+        val path = mutableListOf<Tile>()
+        var current: Node? = goalNode
+
+        while (current != null) {
+            path.add(0, current.tile)
+            current = current.parent
+        }
+
         return path
     }
+
+    // Check if path exists between two tiles
+    fun hasPath(start: Tile, goal: Tile): Boolean = findPath(start, goal) != null
+
+    // Get path length or -1 if no path
+    fun pathLength(start: Tile, goal: Tile): Int = findPath(start, goal)?.size ?: -1
 }

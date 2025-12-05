@@ -1,68 +1,31 @@
-package org.thehappytyrannosaurusrex.varrockmuseum
+package org.thehappytyrannosaurusrex.varrockmuseum.utils
 
 import org.powbot.api.Condition
-import org.powbot.api.Random
-import org.powbot.api.rt4.*
-import org.powbot.api.script.ScriptCategory
-import org.powbot.api.script.ScriptConfiguration
-import org.powbot.api.script.ScriptManifest
-import org.powbot.api.script.OptionType
-import org.powbot.api.script.paint.Paint
-import org.powbot.api.script.paint.PaintBuilder
-import org.powbot.api.script.tree.TreeComponent
-import org.powbot.api.script.tree.TreeScript
-import org.thehappytyrannosaurusrex.api.inventory.DropUtils
+import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Movement
+import org.powbot.api.rt4.Objects
+import org.powbot.api.rt4.Players
 import InventoryUtils
-import org.thehappytyrannosaurusrex.api.ui.CameraController
-import org.thehappytyrannosaurusrex.api.ui.CameraInitProfile
-import org.thehappytyrannosaurusrex.api.ui.ViewportUi
-import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.powbot.api.Random
+import org.powbot.api.rt4.Item
+import org.powbot.api.rt4.Quests
+import org.powbot.api.rt4.Skills
+import org.powbot.api.rt4.Widgets
+import org.thehappytyrannosaurusrex.api.inventory.DropUtils
 import org.thehappytyrannosaurusrex.api.utils.BankUtils
+import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Config
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
-import org.thehappytyrannosaurusrex.varrockmuseum.config.Options
-import org.thehappytyrannosaurusrex.varrockmuseum.config.buildConfig
+import org.powbot.api.rt4.*
 import org.thehappytyrannosaurusrex.varrockmuseum.data.MuseumConstants as C
-import org.thehappytyrannosaurusrex.varrockmuseum.tree.MuseumBranches
-import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils.isDigSiteCompleted
 
-@ScriptManifest(
-    name = "Varrock Museum Cleaner",
-    description = "Cleans Varrock Museum specimens and uses Antique lamps on a chosen skill.",
-    version = "2.0.0",
-    author = "thehappytyrannosaurusrex",
-    category = ScriptCategory.Other
-)
-@ScriptConfiguration.List(
-    [
-        ScriptConfiguration(
-            name = Options.Keys.LAMP_SKILL,
-            description = "Which skill should Antique lamps be used on?",
-            optionType = OptionType.STRING,
-            allowedValues = [
-                Options.Values.ATTACK, Options.Values.STRENGTH, Options.Values.DEFENCE,
-                Options.Values.RANGED, Options.Values.MAGIC, Options.Values.HITPOINTS,
-                Options.Values.PRAYER, Options.Values.AGILITY, Options.Values.HERBLORE,
-                Options.Values.THIEVING, Options.Values.CRAFTING, Options.Values.FLETCHING,
-                Options.Values.SLAYER, Options.Values.HUNTER, Options.Values.MINING,
-                Options.Values.SMITHING, Options.Values.FISHING, Options.Values.COOKING,
-                Options.Values.FIREMAKING, Options.Values.WOODCUTTING, Options.Values.FARMING,
-                Options.Values.RUNECRAFTING, Options.Values.CONSTRUCTION, Options.Values.SAILING
-            ],
-            defaultValue = Options.Values.SLAYER
-        ),
-        ScriptConfiguration(
-            name = Options.Keys.KEEP_ITEMS,
-            description = "Comma-separated item names to NEVER drop (they can still be banked).",
-            optionType = OptionType.STRING,
-            defaultValue = "Coins,"
-        )
-    ]
-)
-class VarrockMuseumCleaner : TreeScript() {
 
-    companion object {
-        private const val SCRIPT_NAME = "Varrock Museum"
+object MuseumUtils {
+
+    private const val SCRIPT_NAME = "Varrock Museum"
+
+    private fun log(tag: String, message: String) {
+        Logger.info(SCRIPT_NAME, tag, message)
     }
 
     enum class Stage {
@@ -81,63 +44,8 @@ class VarrockMuseumCleaner : TreeScript() {
     val lampSkill: LampSkill
         get() = config.lampSkill
 
-    private var startTime: Long = 0L
-    private var paint: Paint? = null
-    var lampsUsed: Int = 0
-        private set
-
     private val uniqueArtefactNamesLc = C.UNIQUE_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
     private val commonArtefactNamesLc = C.COMMON_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
-
-    private val cameraController = CameraController()
-    private val viewportUi = ViewportUi()
-
-    override val rootComponent: TreeComponent<*>
-        get() = MuseumBranches.buildRoot(this)
-
-    private fun log(tag: String, message: String) {
-        Logger.info(SCRIPT_NAME, tag, message)
-    }
-
-    override fun onStart() {
-        try {
-            log("STARTUP", "Varrock Museum Cleaner started.")
-            startTime = System.currentTimeMillis()
-
-            config = buildConfig(this)
-            log("STARTUP", "Using Antique lamps on: ${lampSkill.displayName}")
-            if (config.keepItemNames.isNotEmpty()) {
-                log("STARTUP", "Keep list: ${config.keepItemNames.joinToString()}")
-            }
-
-            cameraController.init(CameraInitProfile(yaw = 190, zoom = 10.0, minPitch = 85, maxPitch = 95))
-            viewportUi.tidyOnStart()
-            DropUtils.enableTapToDrop()
-            DropUtils.ensureInventoryTab()
-
-            initPaint()
-
-            if (!isDigSiteCompleted()) {
-                log("STARTUP", "The Dig Site is NOT completed. Stopping script.")
-                controller.stop()
-                return
-            }
-
-            if (!checkSelectedSkillLevelOrStop()) return
-
-            checkTapToDrop()
-
-        } catch (t: Throwable) {
-            log("STARTUP", "Exception during onStart: ${t.message}")
-            controller.stop()
-        }
-    }
-
-    override fun onStop() {
-        log("STOP", "Script stopped. Lamps used: $lampsUsed")
-    }
-
-    // --- Stage Handlers ---
 
     fun handlePreBankCleanup() {
         log("STAGE", "PRE_BANK_CLEAN: checking inventory")
@@ -219,37 +127,6 @@ class VarrockMuseumCleaner : TreeScript() {
         stage = Stage.MAIN_LOOP
     }
 
-    fun handleMainLoop() {
-        if (hasAntiqueLamps()) {
-            useAntiqueLamp()
-            return
-        }
-
-        if (hasUncleanedFinds()) {
-            cleanSpecimen()
-            return
-        }
-
-        if (hasFindsToStore()) {
-            storeFinds()
-            return
-        }
-
-        if (hasJunkToDrop()) {
-            dropJunkItems("main loop")
-            return
-        }
-
-        if (shouldBankKeepItems()) {
-            bankKeepItems()
-            return
-        }
-
-        collectUncleanedFinds()
-    }
-
-    // --- Inventory Checks ---
-
     private fun hasUncleanedFinds(): Boolean =
         Inventory.stream().name(C.UNCLEANED_FIND).isNotEmpty()
 
@@ -282,8 +159,6 @@ class VarrockMuseumCleaner : TreeScript() {
         }
         return junk
     }
-
-    // --- Actions ---
 
     private fun dropJunkItems(reason: String) {
         val toDrop = computeJunkItems()
@@ -374,15 +249,6 @@ class VarrockMuseumCleaner : TreeScript() {
         return Inventory.stream().any { it.valid() && it.name().lowercase().trim() in keepNames }
     }
 
-    private fun bankKeepItems(): Boolean {
-        val done = BankUtils.depositAllExceptByName(
-            keepItemNames = C.INITIAL_KEEP_FOR_BANK,
-            preferredBankTile = C.VARROCK_EAST_BANK_TILE
-        )
-        if (done) log("BANK", "Deposited keep items")
-        return done
-    }
-
     private fun handleDoorAndGate() {
         C.DOOR_TILES.forEach { doorTile ->
             val door = Objects.stream().at(doorTile).name(C.MUSEUM_DOOR).first()
@@ -401,7 +267,14 @@ class VarrockMuseumCleaner : TreeScript() {
         }
     }
 
-    // --- Requirements ---
+    fun isDigSiteCompleted(): Boolean {
+        return try {
+            Quests.Quest.THE_DIG_SITE.completed()
+        } catch (t: Throwable) {
+            log("QUEST", "Error checking quest: ${t.message}. Assuming completed.")
+            true
+        }
+    }
 
     private fun checkSelectedSkillLevelOrStop(): Boolean {
         val trackedSkill = lampSkill.trackedSkill ?: return true
@@ -427,12 +300,4 @@ class VarrockMuseumCleaner : TreeScript() {
         }
     }
 
-    private fun initPaint() {
-        paint = PaintBuilder.newBuilder()
-            .trackSkill(lampSkill.trackedSkill ?: org.powbot.api.rt4.walking.model.Skill.Overall)
-            .addString("Stage") { stage.name }
-            .addString("Lamps Used") { lampsUsed.toString() }
-            .build()
-        addPaint(paint)
-    }
 }

@@ -4,12 +4,6 @@ import org.powbot.api.Condition
 import org.powbot.api.script.tree.SimpleLeaf
 import org.thehappytyrannosaurusrex.varrockmuseum.VarrockMuseumCleaner
 
-/**
- * Leaf factories for the Varrock Museum Cleaner behaviour tree.
- */
-
-// ---------------------- Stage leaves ----------------------
-
 fun leafPreBank(script: VarrockMuseumCleaner): SimpleLeaf<VarrockMuseumCleaner> =
     SimpleLeaf(script, "Startup: pre-bank cleanup") {
         script.handlePreBankCleanup()
@@ -35,10 +29,7 @@ fun leafMainLoop(script: VarrockMuseumCleaner): SimpleLeaf<VarrockMuseumCleaner>
         script.handleMainLoop()
     }
 
-// ---------------------- Fallback / idle ----------------------
-
 fun leafIdle(script: VarrockMuseumCleaner): SimpleLeaf<VarrockMuseumCleaner> =
     SimpleLeaf(script, "Idle") {
-        // Shouldn't be hit often – only if stage isn't one of the known values.
         Condition.sleep(300)
     }

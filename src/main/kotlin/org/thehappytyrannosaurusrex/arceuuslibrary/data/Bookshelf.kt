@@ -6,7 +6,25 @@ import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.powbot.api.Tile
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Locations.Area
 
-enum class Facing { N, E, S, W }
+enum class Facing {
+    N, E, S, W;
+
+    // Get the yaw angle for camera facing
+    fun toYaw(): Int = when (this) {
+        N -> 0
+        E -> 270
+        S -> 180
+        W -> 90
+    }
+
+    // Get opposite direction
+    fun opposite(): Facing = when (this) {
+        N -> S
+        S -> N
+        E -> W
+        W -> E
+    }
+}
 
 data class Bookshelf(
     val shelfIndex: Int,
