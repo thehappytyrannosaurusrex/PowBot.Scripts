@@ -4,6 +4,8 @@ object Options {
     object Keys {
         const val LAMP_SKILL = "lampSkill"
         const val KEEP_ITEMS = "keepItems"
+        const val STOP_AT_LEVEL = "stopAtLevel"
+        const val ONE_TICK_CLICK = "oneTickClick"
     }
 
     object Values {

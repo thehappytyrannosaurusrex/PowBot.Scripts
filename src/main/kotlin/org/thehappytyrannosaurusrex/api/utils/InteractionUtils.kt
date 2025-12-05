@@ -4,13 +4,12 @@ import org.powbot.api.Area
 import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
-import org.thehappytyrannosaurusrex.api.utils.InventoryUtils
 
 object InteractionUtils {
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Game Objects
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     fun findObject(name: String): GameObject =
         Objects.stream().name(name).nearest().first()
@@ -45,9 +44,9 @@ object InteractionUtils {
         return if (action != null) obj.interact(action) || obj.click() else obj.click()
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // NPCs
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     fun findNpc(name: String): Npc =
         Npcs.stream().name(name).nearest().first()
@@ -73,9 +72,9 @@ object InteractionUtils {
         return if (action != null) npc.interact(action) || npc.click() else npc.click()
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Ground Items
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     fun findGroundItem(name: String): GroundItem =
         GroundItems.stream().name(name).nearest().first()
@@ -100,9 +99,11 @@ object InteractionUtils {
         return if (action != null) item.interact(action) || item.click() else item.click()
     }
 
-    // -------------------------------------------------------------------------
-    // Inventory Items
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // Inventory Items - Basic
+    // =========================================================================
+
+    fun findInvItem(name: String): Item = InventoryUtils.findInvItem(name)
 
     fun interactInvItem(name: String, action: String? = null): Boolean {
         val item = InventoryUtils.findInvItem(name)
@@ -124,9 +125,120 @@ object InteractionUtils {
         return if (equipAction != null) item.interact(equipAction) else item.click()
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // Use Item On... (Item-on-X interactions)
+    // =========================================================================
+
+    /**
+     * Use one inventory item on another inventory item.
+     * Clicks "Use" on sourceItem, then clicks on targetItem.
+     *
+     * @param sourceItemName The item to click "Use" on
+     * @param targetItemName The item to use it on
+     * @return true if both interactions succeeded
+     */
+    fun useItemOnItem(sourceItemName: String, targetItemName: String): Boolean {
+        val sourceItem = InventoryUtils.findInvItem(sourceItemName)
+        val targetItem = InventoryUtils.findInvItem(targetItemName)
+        return doUseItemOn(sourceItem, targetItem)
+    }
+
+    /**
+     * Use an inventory item on a game object.
+     * Clicks "Use" on the item, then clicks on the object.
+     *
+     * @param itemName The inventory item to use
+     * @param objectName The game object to use it on
+     * @param ensureViewport Whether to turn camera to object if not in viewport
+     * @return true if interaction succeeded
+     */
+    fun useItemOnObject(itemName: String, objectName: String, ensureViewport: Boolean = true): Boolean {
+        val item = InventoryUtils.findInvItem(itemName)
+        if (!item.valid()) return false
+
+        val obj = findObject(objectName)
+        if (!obj.valid()) return false
+
+        if (ensureViewport && !obj.inViewport()) {
+            Camera.turnTo(obj)
+            Condition.sleep(300)
+        }
+
+        return item.useOn(obj)
+    }
+
+    /**
+     * Use an inventory item on a game object at a specific tile.
+     */
+    fun useItemOnObjectAt(itemName: String, objectName: String, tile: Tile, ensureViewport: Boolean = true): Boolean {
+        val item = InventoryUtils.findInvItem(itemName)
+        if (!item.valid()) return false
+
+        val obj = findObjectAt(objectName, tile)
+        if (!obj.valid()) return false
+
+        if (ensureViewport && !obj.inViewport()) {
+            Camera.turnTo(obj)
+            Condition.sleep(300)
+        }
+
+        return item.useOn(obj)
+    }
+
+    /**
+     * Use an inventory item on an NPC.
+     * Clicks "Use" on the item, then clicks on the NPC.
+     *
+     * @param itemName The inventory item to use
+     * @param npcName The NPC to use it on
+     * @param ensureViewport Whether to move to NPC if not in viewport
+     * @return true if interaction succeeded
+     */
+    fun useItemOnNpc(itemName: String, npcName: String, ensureViewport: Boolean = true): Boolean {
+        val item = InventoryUtils.findInvItem(itemName)
+        if (!item.valid()) return false
+
+        val npc = findNpc(npcName)
+        if (!npc.valid()) return false
+
+        if (ensureViewport && !npc.inViewport()) {
+            Movement.moveTo(npc)
+            Condition.wait({ npc.inViewport() }, 250, 12)
+        }
+        if (!npc.inViewport()) return false
+
+        return item.useOn(npc)
+    }
+
+    /**
+     * Use an inventory item on a ground item.
+     */
+    fun useItemOnGroundItem(itemName: String, groundItemName: String, ensureViewport: Boolean = true): Boolean {
+        val item = InventoryUtils.findInvItem(itemName)
+        if (!item.valid()) return false
+
+        val groundItem = findGroundItem(groundItemName)
+        if (!groundItem.valid()) return false
+
+        if (ensureViewport && !groundItem.inViewport()) {
+            Camera.turnTo(groundItem)
+            Condition.sleep(300)
+        }
+
+        return item.useOn(groundItem)
+    }
+
+    /**
+     * Internal helper for item-on-item using PowBot's useOn method
+     */
+    private fun doUseItemOn(source: Item, target: Item): Boolean {
+        if (!source.valid() || !target.valid()) return false
+        return source.useOn(target)
+    }
+
+    // =========================================================================
     // Equipment
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     fun hasEquipped(name: String): Boolean = Equipment.stream().name(name).isNotEmpty()
     fun hasAllEquipped(vararg names: String): Boolean = names.all { hasEquipped(it) }
@@ -137,13 +249,18 @@ object InteractionUtils {
         return item.interact("Remove") || item.click()
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Wait Helpers
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     fun waitUntilIdle(timeoutMs: Int = 5000): Boolean {
         val attempts = timeoutMs / 150
         return Condition.wait({ Players.local().animation() == -1 && !Players.local().inMotion() }, 150, attempts)
+    }
+
+    fun waitUntilAnimating(timeoutMs: Int = 3000): Boolean {
+        val attempts = timeoutMs / 150
+        return Condition.wait({ Players.local().animation() != -1 }, 150, attempts)
     }
 
     fun waitUntilAtTile(tile: Tile, tolerance: Int = 1, timeoutMs: Int = 5000): Boolean {
@@ -156,14 +273,28 @@ object InteractionUtils {
         return Condition.wait({ area.contains(Players.local()) }, 150, attempts)
     }
 
-    // -------------------------------------------------------------------------
+    fun waitUntilInvContains(itemName: String, timeoutMs: Int = 5000): Boolean {
+        val attempts = timeoutMs / 150
+        return Condition.wait({ InventoryUtils.invContains(itemName) }, 150, attempts)
+    }
+
+    fun waitUntilInvNotContains(itemName: String, timeoutMs: Int = 5000): Boolean {
+        val attempts = timeoutMs / 150
+        return Condition.wait({ !InventoryUtils.invContains(itemName) }, 150, attempts)
+    }
+
+    fun waitUntilInvFull(timeoutMs: Int = 10000): Boolean {
+        val attempts = timeoutMs / 150
+        return Condition.wait({ InventoryUtils.fullInv() }, 150, attempts)
+    }
+
+    // =========================================================================
     // Explicit ID-based methods (use only when IDs are required)
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
     object ById {
         fun findObject(id: Int): GameObject = Objects.stream().id(id).nearest().first()
         fun findNpc(id: Int): Npc = Npcs.stream().id(id).nearest().first()
-
 
         fun interactObject(id: Int, action: String? = null): Boolean {
             val obj = findObject(id)
@@ -181,6 +312,22 @@ object InteractionUtils {
             val item = InventoryUtils.findInvItemId(id)
             if (!item.valid()) return false
             return if (action != null) item.interact(action) || item.click() else item.click()
+        }
+
+        fun useItemOnObject(itemId: Int, objectId: Int): Boolean {
+            val item = InventoryUtils.findInvItemId(itemId)
+            if (!item.valid()) return false
+            val obj = findObject(objectId)
+            if (!obj.valid()) return false
+            return item.useOn(obj)
+        }
+
+        fun useItemOnNpc(itemId: Int, npcId: Int): Boolean {
+            val item = InventoryUtils.findInvItemId(itemId)
+            if (!item.valid()) return false
+            val npc = findNpc(npcId)
+            if (!npc.valid()) return false
+            return item.useOn(npc)
         }
     }
 }

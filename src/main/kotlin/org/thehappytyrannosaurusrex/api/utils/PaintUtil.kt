@@ -12,9 +12,9 @@ import org.powbot.api.rt4.walking.model.Skill
  * val paint = PaintUtil.create {
  *     title("My Script")
  *     trackSkill(Skill.Slayer)
- *     stat("Stage") { currentStage.name }
+ *     currentTask { myCurrentTask }
  *     stat("Items Collected") { itemCount.toString() }
- *     stat("Runtime") { formatRuntime() }
+ *     stat("Runtime") { PaintUtil.formatRuntime(startTime) }
  * }
  * addPaint(paint)
  * ```
@@ -75,6 +75,13 @@ object PaintUtil {
         }
 
         /**
+         * Add a "Current Task" stat line (convenience for common pattern)
+         */
+        fun currentTask(taskProvider: () -> String) {
+            stats.add("Task" to taskProvider)
+        }
+
+        /**
          * Add a dynamic stat line
          */
         fun stat(label: String, valueProvider: () -> String) {
@@ -86,6 +93,24 @@ object PaintUtil {
          */
         fun staticStat(label: String, value: String) {
             stats.add(label to { value })
+        }
+
+        /**
+         * Add runtime stat (convenience method)
+         */
+        fun runtime(startTimeMs: () -> Long) {
+            stats.add("Runtime" to { formatRuntime(startTimeMs()) })
+        }
+
+        /**
+         * Add a count with per-hour rate
+         */
+        fun countWithRate(label: String, countProvider: () -> Int, startTimeMs: () -> Long) {
+            stats.add(label to {
+                val count = countProvider()
+                val rate = formatPerHour(count, startTimeMs())
+                "$count ($rate)"
+            })
         }
 
         internal fun build(): Paint {
@@ -103,10 +128,7 @@ object PaintUtil {
         }
     }
 
-    // -------------------------------------------------------------------------
     // Formatting Helpers
-    // -------------------------------------------------------------------------
-
     /**
      * Format milliseconds as HH:MM:SS
      */
@@ -138,5 +160,13 @@ object PaintUtil {
         if (elapsed < 1000) return "0/hr"
         val perHour = (count * 3600000.0 / elapsed).toLong()
         return "${formatNumber(perHour)}/hr"
+    }
+
+    /**
+     * Format XP per hour
+     */
+    fun formatXpPerHour(xpGained: Int, startTimeMs: Long): String {
+        val perHour = formatPerHour(xpGained, startTimeMs)
+        return perHour.replace("/hr", " xp/hr")
     }
 }

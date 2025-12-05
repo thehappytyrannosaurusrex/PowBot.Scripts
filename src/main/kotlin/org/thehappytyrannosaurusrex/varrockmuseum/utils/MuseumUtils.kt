@@ -5,8 +5,9 @@ import org.powbot.api.Random
 import org.powbot.api.rt4.*
 import org.thehappytyrannosaurusrex.api.inventory.DropUtils
 import org.thehappytyrannosaurusrex.api.utils.BankUtils
-import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.InteractionUtils
 import org.thehappytyrannosaurusrex.api.utils.InventoryUtils
+import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
 import org.thehappytyrannosaurusrex.varrockmuseum.data.MuseumConstants as C
 
@@ -23,9 +24,16 @@ object MuseumUtils {
     // Pre-computed lowercase sets for performance
     private val uniqueArtefactNamesLc = C.UNIQUE_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
     private val commonArtefactNamesLc = C.COMMON_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
+    private val allArtefactNamesLc = uniqueArtefactNamesLc + commonArtefactNamesLc
     private val keepWhenDroppingLc = C.KEEP_WHEN_DROPPING.map { it.lowercase() }.toSet()
 
+    // =========================================================================
     // Quest / Requirements Checks
+    // =========================================================================
+
+    /**
+     * Check if The Dig Site quest is completed (required for this activity)
+     */
     fun isDigSiteCompleted(): Boolean {
         return try {
             Quests.Quest.THE_DIG_SITE.completed()
@@ -35,6 +43,9 @@ object MuseumUtils {
         }
     }
 
+    /**
+     * Verify skill level is >= 10 for lamp usage. Returns false if too low.
+     */
     fun isSkillLevelSufficient(lampSkill: LampSkill): Boolean {
         val trackedSkill = lampSkill.trackedSkill ?: return true
         return try {
@@ -49,42 +60,81 @@ object MuseumUtils {
         }
     }
 
+    /**
+     * Get current level for a skill
+     */
+    fun getCurrentLevel(lampSkill: LampSkill): Int {
+        val trackedSkill = lampSkill.trackedSkill ?: return 0
+        return try {
+            Skills.realLevel(trackedSkill.index)
+        } catch (t: Throwable) {
+            0
+        }
+    }
+
+    /**
+     * Check if target level has been reached
+     */
+    fun hasReachedTargetLevel(lampSkill: LampSkill, targetLevel: Int): Boolean {
+        if (targetLevel <= 0) return false
+        return getCurrentLevel(lampSkill) >= targetLevel
+    }
+
+    // =========================================================================
     // Location Checks
+    // =========================================================================
+
+    /**
+     * Check if player is inside the cleaning area
+     */
     fun isInsideCleaningArea(): Boolean {
         val me = Players.local()
         return me.valid() && C.CLEANING_AREA.contains(me.tile())
     }
 
+    /**
+     * Check if player needs to travel to museum
+     */
     fun needsToTravelToMuseum(): Boolean {
         val me = Players.local()
         return me.valid() && !C.CLEANING_AREA.contains(me.tile())
     }
 
-    // Inventory State Checks
-    fun hasUncleanedFinds(): Boolean =
-        InventoryUtils.invContains(C.UNCLEANED_FIND)
+    // =========================================================================
+    // Inventory State Checks (using InventoryUtils)
+    // =========================================================================
 
-    fun hasAntiqueLamps(): Boolean =
-        InventoryUtils.invContains(C.ANTIQUE_LAMP)
+    /**
+     * Check if inventory has uncleaned finds
+     */
+    fun hasUncleanedFinds(): Boolean = InventoryUtils.invContains(C.UNCLEANED_FIND)
 
-    fun hasFindsToStore(): Boolean =
-        Inventory.stream().any { item ->
-            val name = item.name().lowercase()
-            name in uniqueArtefactNamesLc || name in commonArtefactNamesLc
-        }
+    /**
+     * Check if inventory has antique lamps
+     */
+    fun hasAntiqueLamps(): Boolean = InventoryUtils.invContains(C.ANTIQUE_LAMP)
 
-    fun hasAllTools(): Boolean {
-        val hasTrowel = InventoryUtils.invContains(C.TROWEL)
-        val hasRockPick = InventoryUtils.invContains(C.ROCK_PICK)
-        val hasBrush = InventoryUtils.invContains(C.SPECIMEN_BRUSH)
-        return hasTrowel && hasRockPick && hasBrush
-    }
+    /**
+     * Check if inventory has artefacts that can be stored in the crate
+     */
+    fun hasFindsToStore(): Boolean = InventoryUtils.hasAnyOfNames(allArtefactNamesLc)
 
+    /**
+     * Check if player has all required cleaning tools
+     */
+    fun hasAllTools(): Boolean = InventoryUtils.allInInv(C.TROWEL, C.ROCK_PICK, C.SPECIMEN_BRUSH)
+
+    /**
+     * Check if inventory has junk items to drop
+     */
     fun hasJunkToDrop(userKeepNames: Set<String>): Boolean =
         computeJunkItems(userKeepNames).isNotEmpty()
 
+    /**
+     * Check if we should bank user-kept items (inventory full, nothing else to do)
+     */
     fun shouldBankKeepItems(userKeepNames: Set<String>): Boolean {
-        if (!Inventory.isFull()) return false
+        if (!InventoryUtils.fullInv()) return false
         if (hasUncleanedFinds()) return false
         if (hasFindsToStore()) return false
         if (hasJunkToDrop(userKeepNames)) return false
@@ -92,37 +142,42 @@ object MuseumUtils {
         return Inventory.stream().any { it.valid() && it.name().lowercase().trim() in userKeepNames }
     }
 
+    /**
+     * Compute list of junk items to drop
+     */
     fun computeJunkItems(userKeepNames: Set<String>): List<Item> {
         val junk = mutableListOf<Item>()
 
         Inventory.stream().forEach { item ->
             if (!item.valid() || item.id() == -1) return@forEach
 
-            val name = item.name()
-            val normName = name.lowercase().trim()
+            val normName = item.name().lowercase().trim()
 
             // Skip user-kept items
             if (normName in userKeepNames) return@forEach
             // Skip script-essential items
             if (normName in keepWhenDroppingLc) return@forEach
             // Skip artefacts (will be stored)
-            if (normName in uniqueArtefactNamesLc) return@forEach
-            if (normName in commonArtefactNamesLc) return@forEach
+            if (normName in allArtefactNamesLc) return@forEach
 
             junk.add(item)
         }
         return junk
     }
 
-    fun hasNonEssentialItems(): Boolean {
-        val allowedLc = C.INITIAL_KEEP_FOR_BANK.map { it.lowercase() }.toSet()
-        return Inventory.stream().any { item ->
-            item.valid() && item.name().lowercase().trim() !in allowedLc
-        }
-    }
+    /**
+     * Check if inventory has non-essential items for banking
+     */
+    fun hasNonEssentialItems(): Boolean =
+        InventoryUtils.hasNonAllowedItemsByNames(C.INITIAL_KEEP_FOR_BANK)
 
-    // Actions - Travel & Navigation
+    // =========================================================================
+    // Actions - Travel & Navigation (using InteractionUtils)
+    // =========================================================================
 
+    /**
+     * Walk to the museum cleaning area
+     */
     fun travelToMuseum(): Boolean {
         val me = Players.local()
         if (!me.valid()) return false
@@ -135,13 +190,16 @@ object MuseumUtils {
         if (me.tile().distanceTo(C.MUSEUM_TARGET_TILE) > 5) {
             log("TRAVEL", "Walking to museum")
             Movement.walkTo(C.MUSEUM_TARGET_TILE)
-            Condition.wait({ C.CLEANING_AREA.contains(Players.local().tile()) }, 300, 20)
+            InteractionUtils.waitUntilInArea(C.CLEANING_AREA, 6000)
         }
 
         handleDoorAndGate()
         return C.CLEANING_AREA.contains(Players.local().tile())
     }
 
+    /**
+     * Open doors and gates if needed
+     */
     fun handleDoorAndGate() {
         C.DOOR_TILES.forEach { doorTile ->
             val door = Objects.stream().at(doorTile).name(C.MUSEUM_DOOR).first()
@@ -222,90 +280,138 @@ object MuseumUtils {
         }
 
         log("KIT", "Missing tools, searching tools object")
-        val tools = Objects.stream().name(C.TOOL_OBJECT).nearest().first()
-        if (!tools.valid()) {
+        val interacted = InteractionUtils.interactObject(C.TOOL_OBJECT, "Take")
+        if (!interacted) {
             log("KIT", "Tools object not found")
             return false
         }
 
-        tools.interact("Take")
-        return Condition.wait({
-            Inventory.stream().name(C.TROWEL).isNotEmpty() &&
-                    Inventory.stream().name(C.ROCK_PICK).isNotEmpty() &&
-                    Inventory.stream().name(C.SPECIMEN_BRUSH).isNotEmpty()
-        }, 300, 10)
+        return Condition.wait({ hasAllTools() }, 300, 10)
     }
 
     /**
      * Clean uncleaned finds at the specimen table
      */
     fun cleanSpecimen(): Boolean {
-        val table = Objects.stream().name(C.SPECIMEN_TABLE).nearest().first()
-        if (!table.valid()) {
-            log("CLEAN", "No specimen table found")
+        if (!hasUncleanedFinds()) return false
+
+        val success = InteractionUtils.useItemOnObject(C.UNCLEANED_FIND, C.SPECIMEN_TABLE)
+        if (!success) {
+            log("CLEAN", "Failed to use uncleaned find on specimen table")
             return false
         }
 
-        val uncleaned = Inventory.stream().name(C.UNCLEANED_FIND).first()
-        if (!uncleaned.valid()) return false
-
-        uncleaned.useOn(table)
         return Condition.wait(
-            { !Inventory.stream().name(C.UNCLEANED_FIND).isNotEmpty() || Inventory.isFull() },
+            { !hasUncleanedFinds() || InventoryUtils.fullInv() },
             300, 30
         )
     }
 
     /**
-     * Store artefacts in the storage crate
+     * Store artefacts in the storage crate.
+     * Interacts ONCE and waits until all artefacts are deposited.
      */
     fun storeFinds(): Boolean {
-        val crate = Objects.stream().name(C.STORAGE_CRATE).nearest().first()
+        if (!hasFindsToStore()) return false
+
+        val crate = InteractionUtils.findObject(C.STORAGE_CRATE)
         if (!crate.valid()) {
             log("STORE", "No storage crate found")
             return false
         }
 
+        // Only interact once
+        log("STORE", "Storing finds in crate")
         crate.interact("Search")
-        return Condition.wait({ !hasFindsToStore() }, 300, 20)
+
+        // Wait until NO artefacts remain in inventory
+        return Condition.wait({ !hasFindsToStore() }, 300, 30)
     }
 
     /**
-     * Collect uncleaned finds from specimen rocks
+     * Collect uncleaned finds from specimen rocks (standard mode).
+     * Clicks once and waits for inventory to fill.
      */
     fun collectUncleanedFinds(): Boolean {
-        val rocks = Objects.stream().name(C.SPECIMEN_ROCK).nearest().first()
-        if (!rocks.valid()) {
+        val interacted = InteractionUtils.interactObject(C.SPECIMEN_ROCK, "Take")
+        if (!interacted) {
             log("COLLECT", "No specimen rocks found")
             return false
         }
 
-        rocks.interact("Take")
         return Condition.wait(
-            { Inventory.stream().name(C.UNCLEANED_FIND).isNotEmpty() || Inventory.isFull() },
+            { hasUncleanedFinds() || InventoryUtils.fullInv() },
             300, 30
         )
     }
 
     /**
+     * Collect uncleaned finds using 1-tick clicking (spam click mode).
+     * Clicks the rocks every 400-700ms until inventory is full of uncleaned finds.
+     *
+     * @return true when inventory is full
+     */
+    fun collectUncleanedFinds1T(): Boolean {
+        val rocks = InteractionUtils.findObject(C.SPECIMEN_ROCK)
+        if (!rocks.valid()) {
+            log("COLLECT", "No specimen rocks found")
+            return false
+        }
+
+        log("COLLECT", "1T clicking specimen rocks")
+
+        while (!InventoryUtils.fullInv()) {
+            // Check if rocks still valid
+            val currentRocks = InteractionUtils.findObject(C.SPECIMEN_ROCK)
+            if (!currentRocks.valid()) {
+                log("COLLECT", "Rocks no longer valid")
+                break
+            }
+
+            // Click the rocks
+            currentRocks.interact("Take")
+
+            // Wait 400-700ms before next click
+            Condition.sleep(Random.nextInt(400, 700))
+        }
+
+        return InventoryUtils.fullInv()
+    }
+
+    /**
      * Use antique lamp on selected skill
+     * Uses Components.stream() to find skill by text for robustness.
+     *
      * @return true if lamp was used successfully
      */
     fun useAntiqueLamp(lampSkill: LampSkill): Boolean {
-        val lamp = Inventory.stream().name(C.ANTIQUE_LAMP).first()
+        val lamp = InventoryUtils.findInvItem(C.ANTIQUE_LAMP)
         if (!lamp.valid()) return false
 
         log("LAMP", "Using Antique lamp on ${lampSkill.displayName}")
         lamp.interact("Rub")
 
+        // Wait for lamp widget to appear
         if (!Condition.wait({ Widgets.widget(240).valid() }, 300, 10)) {
             log("LAMP", "Lamp widget did not appear")
             return false
         }
 
-        val skillComponent = Widgets.widget(240).component(lampSkill.widgetIndex)
+        // Try to find skill component by widget index first (faster)
+        var skillComponent = Widgets.widget(240).component(lampSkill.widgetIndex)
+
+        // Fallback: search by text using Components.stream()
         if (!skillComponent.valid()) {
-            log("LAMP", "Skill component not found at index ${lampSkill.widgetIndex}")
+            log("LAMP", "Widget index ${lampSkill.widgetIndex} invalid, searching by text")
+            skillComponent = Components.stream()
+                .widget(240)
+                .textContains(lampSkill.displayName)
+                .viewable()
+                .first()
+        }
+
+        if (!skillComponent.valid()) {
+            log("LAMP", "Skill component not found for ${lampSkill.displayName}")
             return false
         }
 

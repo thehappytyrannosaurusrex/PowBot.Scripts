@@ -2,8 +2,7 @@ package org.thehappytyrannosaurusrex.api.data
 
 import org.powbot.api.rt4.Component
 
-// Simple accessors for stat level components
-object PlayerStats {
+object PlayerLvl {
     fun attackLvl(): Component = WidgetIds.Stats.attackLvl()
     fun strengthLvl(): Component = WidgetIds.Stats.strengthLvl()
     fun defenceLvl(): Component = WidgetIds.Stats.defenceLvl()
