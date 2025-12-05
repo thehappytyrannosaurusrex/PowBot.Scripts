@@ -26,6 +26,8 @@ object InventoryUtils {
     fun allInInv(vararg items: String): Boolean = items.all { invContains(it) }
     fun noneInInv(items: List<String>): Boolean = items.none { invContains(it) }
     fun noneInInv(vararg items: String): Boolean = items.none { invContains(it) }
+    fun inContainsLower(item: String): Boolean = Inventory.stream().any { item.contains(it.name().lowercase()) }
+    fun setContainsLower(item: Set<String>): Boolean = Inventory.stream().any { item.contains(it.name().lowercase()) }
 
     fun findInvItem(item: String): Item = Inventory.stream().name(item).first()
     fun countInInv(item: String): Int = Inventory.stream().name(item).count().toInt()
