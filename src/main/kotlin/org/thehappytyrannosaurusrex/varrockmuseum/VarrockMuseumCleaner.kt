@@ -1,35 +1,27 @@
 package org.thehappytyrannosaurusrex.varrockmuseum
 
 import org.powbot.api.Condition
-import org.powbot.api.Random
-import org.powbot.api.rt4.*
+import org.powbot.api.script.AbstractScript
+import org.powbot.api.script.OptionType
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.ScriptConfiguration
 import org.powbot.api.script.ScriptManifest
-import org.powbot.api.script.OptionType
-import org.powbot.api.script.paint.Paint
-import org.powbot.api.script.paint.PaintBuilder
-import org.powbot.api.script.tree.TreeComponent
-import org.powbot.api.script.tree.TreeScript
 import org.thehappytyrannosaurusrex.api.inventory.DropUtils
-import InventoryUtils
 import org.thehappytyrannosaurusrex.api.ui.CameraController
 import org.thehappytyrannosaurusrex.api.ui.CameraInitProfile
 import org.thehappytyrannosaurusrex.api.ui.ViewportUi
 import org.thehappytyrannosaurusrex.api.utils.Logger
-import org.thehappytyrannosaurusrex.api.utils.BankUtils
+import org.thehappytyrannosaurusrex.api.utils.PaintUtil
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Config
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Options
 import org.thehappytyrannosaurusrex.varrockmuseum.config.buildConfig
-import org.thehappytyrannosaurusrex.varrockmuseum.data.MuseumConstants as C
-import org.thehappytyrannosaurusrex.varrockmuseum.tree.MuseumBranches
-import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils.isDigSiteCompleted
+import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils
 
 @ScriptManifest(
     name = "Varrock Museum Cleaner",
     description = "Cleans Varrock Museum specimens and uses Antique lamps on a chosen skill.",
-    version = "2.0.0",
+    version = "3.0.0",
     author = "thehappytyrannosaurusrex",
     category = ScriptCategory.Other
 )
@@ -59,11 +51,15 @@ import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils.isDigSiteCom
         )
     ]
 )
-class VarrockMuseumCleaner : TreeScript() {
+class VarrockMuseumCleaner : AbstractScript() {
 
     companion object {
         private const val SCRIPT_NAME = "Varrock Museum"
     }
+
+    // =========================================================================
+    // Script State
+    // =========================================================================
 
     enum class Stage {
         PRE_BANK_CLEAN,
@@ -73,59 +69,61 @@ class VarrockMuseumCleaner : TreeScript() {
         MAIN_LOOP
     }
 
-    var stage: Stage = Stage.PRE_BANK_CLEAN
-
-    lateinit var config: Config
-        private set
-
-    val lampSkill: LampSkill
-        get() = config.lampSkill
-
+    private var stage = Stage.PRE_BANK_CLEAN
+    private lateinit var config: Config
     private var startTime: Long = 0L
-    private var paint: Paint? = null
     var lampsUsed: Int = 0
         private set
 
-    private val uniqueArtefactNamesLc = C.UNIQUE_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
-    private val commonArtefactNamesLc = C.COMMON_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
+    // Helpers (lazy init)
+    private val cameraController by lazy { CameraController() }
+    private val viewportUi by lazy { ViewportUi() }
 
-    private val cameraController = CameraController()
-    private val viewportUi = ViewportUi()
+    // Config accessors
+    private val lampSkill: LampSkill get() = config.lampSkill
+    private val keepItemNames: Set<String> get() = config.keepItemNames
 
-    override val rootComponent: TreeComponent<*>
-        get() = MuseumBranches.buildRoot(this)
-
-    private fun log(tag: String, message: String) {
-        Logger.info(SCRIPT_NAME, tag, message)
-    }
+    // =========================================================================
+    // Lifecycle
+    // =========================================================================
 
     override fun onStart() {
         try {
-            log("STARTUP", "Varrock Museum Cleaner started.")
+            log("STARTUP", "Varrock Museum Cleaner starting...")
             startTime = System.currentTimeMillis()
 
+            // Parse config
             config = buildConfig(this)
             log("STARTUP", "Using Antique lamps on: ${lampSkill.displayName}")
-            if (config.keepItemNames.isNotEmpty()) {
-                log("STARTUP", "Keep list: ${config.keepItemNames.joinToString()}")
+            if (keepItemNames.isNotEmpty()) {
+                log("STARTUP", "Keep list: ${keepItemNames.joinToString()}")
             }
 
+            // Setup camera and UI
             cameraController.init(CameraInitProfile(yaw = 190, zoom = 10.0, minPitch = 85, maxPitch = 95))
             viewportUi.tidyOnStart()
+
+            // Setup input mode
             DropUtils.enableTapToDrop()
             DropUtils.ensureInventoryTab()
 
+            // Setup paint overlay
             initPaint()
 
-            if (!isDigSiteCompleted()) {
+            // Validate requirements
+            if (!MuseumUtils.isDigSiteCompleted()) {
                 log("STARTUP", "The Dig Site is NOT completed. Stopping script.")
                 controller.stop()
                 return
             }
 
-            if (!checkSelectedSkillLevelOrStop()) return
+            if (!MuseumUtils.isSkillLevelSufficient(lampSkill)) {
+                log("STARTUP", "${lampSkill.displayName} level is < 10. Cannot use lamps. Stopping.")
+                controller.stop()
+                return
+            }
 
-            checkTapToDrop()
+            log("STARTUP", "Initialization complete. Starting main loop.")
 
         } catch (t: Throwable) {
             log("STARTUP", "Exception during onStart: ${t.message}")
@@ -137,302 +135,121 @@ class VarrockMuseumCleaner : TreeScript() {
         log("STOP", "Script stopped. Lamps used: $lampsUsed")
     }
 
-    // --- Stage Handlers ---
+    // =========================================================================
+    // Main Loop (poll)
+    // =========================================================================
 
-    fun handlePreBankCleanup() {
-        log("STAGE", "PRE_BANK_CLEAN: checking inventory")
+    override fun poll() {
+        when (stage) {
+            Stage.PRE_BANK_CLEAN -> handlePreBankClean()
+            Stage.TRAVEL_TO_MUSEUM -> handleTravel()
+            Stage.ENSURE_KIT -> handleEnsureKit()
+            Stage.INSIDE_NORMALISE -> handleNormalise()
+            Stage.MAIN_LOOP -> handleMainLoop()
+        }
+    }
 
-        val hasJunk = InventoryUtils.hasNonAllowedItemsByNames(
-            allowedNames = C.INITIAL_KEEP_FOR_BANK,
-            additionalPredicates = emptyList()
-        )
+    // =========================================================================
+    // Stage Handlers
+    // =========================================================================
 
-        if (hasJunk) {
-            log("BANK", "Banking non-essential items at Varrock East")
-            val done = BankUtils.depositAllExceptByName(
-                keepItemNames = C.INITIAL_KEEP_FOR_BANK,
-                preferredBankTile = C.VARROCK_EAST_BANK_TILE
-            )
-            if (done) {
-                log("BANK", "Pre-bank cleanup complete")
-                stage = Stage.TRAVEL_TO_MUSEUM
-            }
-        } else {
-            log("STAGE", "Inventory already clean")
+    private fun handlePreBankClean() {
+        log("STAGE", "PRE_BANK_CLEAN")
+
+        if (!MuseumUtils.hasNonEssentialItems()) {
+            log("STAGE", "Inventory clean, advancing to TRAVEL")
+            stage = Stage.TRAVEL_TO_MUSEUM
+            return
+        }
+
+        if (MuseumUtils.bankNonEssentialItems()) {
             stage = Stage.TRAVEL_TO_MUSEUM
         }
     }
 
-    fun handleTravelToMuseum() {
+    private fun handleTravel() {
         log("STAGE", "TRAVEL_TO_MUSEUM")
 
-        val me = Players.local()
-        if (!me.valid()) return
-
-        if (C.CLEANING_AREA.contains(me.tile())) {
-            log("TRAVEL", "Already inside cleaning area")
+        if (MuseumUtils.isInsideCleaningArea()) {
+            log("TRAVEL", "Already in cleaning area")
             stage = Stage.ENSURE_KIT
             return
         }
 
-        if (me.tile().distanceTo(C.MUSEUM_TARGET_TILE) > 5) {
-            log("TRAVEL", "Walking to museum")
-            Movement.walkTo(C.MUSEUM_TARGET_TILE)
-            Condition.wait({ C.CLEANING_AREA.contains(Players.local().tile()) }, 300, 20)
-        }
-
-        handleDoorAndGate()
-
-        if (C.CLEANING_AREA.contains(Players.local().tile())) {
+        if (MuseumUtils.travelToMuseum()) {
             stage = Stage.ENSURE_KIT
         }
     }
 
-    fun handleEnsureKit() {
+    private fun handleEnsureKit() {
         log("STAGE", "ENSURE_KIT")
 
-        val hasTrowel = Inventory.stream().name(C.TROWEL).isNotEmpty()
-        val hasRockPick = Inventory.stream().name(C.ROCK_PICK).isNotEmpty()
-        val hasBrush = Inventory.stream().name(C.SPECIMEN_BRUSH).isNotEmpty()
-
-        if (hasTrowel && hasRockPick && hasBrush) {
+        if (MuseumUtils.hasAllTools()) {
             log("KIT", "All tools present")
             stage = Stage.INSIDE_NORMALISE
             return
         }
 
-        log("KIT", "Missing tools, searching tools object")
-        val tools = Objects.stream().name(C.TOOL_OBJECT).nearest().first()
-        if (tools.valid()) {
-            tools.interact("Take")
-            Condition.wait({
-                Inventory.stream().name(C.TROWEL).isNotEmpty() &&
-                        Inventory.stream().name(C.ROCK_PICK).isNotEmpty() &&
-                        Inventory.stream().name(C.SPECIMEN_BRUSH).isNotEmpty()
-            }, 300, 10)
+        if (MuseumUtils.takeTools()) {
+            stage = Stage.INSIDE_NORMALISE
         }
     }
 
-    fun handleInsideNormalise() {
+    private fun handleNormalise() {
         log("STAGE", "INSIDE_NORMALISE")
-        dropJunkItems("normalisation")
+        MuseumUtils.dropJunkItems(keepItemNames, "normalisation")
         stage = Stage.MAIN_LOOP
     }
 
-    fun handleMainLoop() {
-        if (hasAntiqueLamps()) {
-            useAntiqueLamp()
-            return
-        }
-
-        if (hasUncleanedFinds()) {
-            cleanSpecimen()
-            return
-        }
-
-        if (hasFindsToStore()) {
-            storeFinds()
-            return
-        }
-
-        if (hasJunkToDrop()) {
-            dropJunkItems("main loop")
-            return
-        }
-
-        if (shouldBankKeepItems()) {
-            bankKeepItems()
-            return
-        }
-
-        collectUncleanedFinds()
-    }
-
-    // --- Inventory Checks ---
-
-    private fun hasUncleanedFinds(): Boolean =
-        Inventory.stream().name(C.UNCLEANED_FIND).isNotEmpty()
-
-    private fun hasAntiqueLamps(): Boolean =
-        Inventory.stream().name(C.ANTIQUE_LAMP).isNotEmpty()
-
-    private fun hasFindsToStore(): Boolean =
-        Inventory.stream().any { item ->
-            val name = item.name().lowercase()
-            name in uniqueArtefactNamesLc || name in commonArtefactNamesLc
-        }
-
-    private fun hasJunkToDrop(): Boolean = computeJunkItems().isNotEmpty()
-
-    private fun computeJunkItems(): List<Item> {
-        val junk = mutableListOf<Item>()
-        val keepNames = config.keepItemNames
-
-        Inventory.stream().forEach { item ->
-            if (!item.valid() || item.id() == -1) return@forEach
-            val name = item.name()
-            val normName = name.lowercase().trim()
-
-            if (normName in keepNames) return@forEach
-            if (name in C.KEEP_WHEN_DROPPING) return@forEach
-            if (normName in uniqueArtefactNamesLc) return@forEach
-            if (normName in commonArtefactNamesLc) return@forEach
-
-            junk.add(item)
-        }
-        return junk
-    }
-
-    // --- Actions ---
-
-    private fun dropJunkItems(reason: String) {
-        val toDrop = computeJunkItems()
-        if (toDrop.isEmpty()) {
-            log("DROP", "No junk to drop for $reason")
-            return
-        }
-
-        log("DROP", "Dropping ${toDrop.size} junk items for $reason")
-        DropUtils.ensureInventoryTab()
-
-        toDrop.shuffled().forEach { item ->
-            if (!item.valid()) return@forEach
-            if (DropUtils.dropItem(item)) {
-                Condition.sleep(Random.nextInt(350, 650))
-            }
-        }
-    }
-
-    private fun cleanSpecimen() {
-        val table = Objects.stream().name(C.SPECIMEN_TABLE).nearest().first()
-        if (!table.valid()) {
-            log("CLEAN", "No specimen table found")
-            return
-        }
-
-        val uncleaned = Inventory.stream().name(C.UNCLEANED_FIND).first()
-        if (!uncleaned.valid()) return
-
-        uncleaned.useOn(table)
-        Condition.wait({ !Inventory.stream().name(C.UNCLEANED_FIND).isNotEmpty() || Inventory.isFull() }, 300, 30)
-    }
-
-    private fun storeFinds() {
-        val crate = Objects.stream().name(C.STORAGE_CRATE).nearest().first()
-        if (!crate.valid()) {
-            log("STORE", "No storage crate found")
-            return
-        }
-
-        crate.interact("Search")
-        Condition.wait({ !hasFindsToStore() }, 300, 20)
-    }
-
-    private fun collectUncleanedFinds() {
-        val rocks = Objects.stream().name(C.SPECIMEN_ROCK).nearest().first()
-        if (!rocks.valid()) {
-            log("COLLECT", "No specimen rocks found")
-            return
-        }
-
-        rocks.interact("Take")
-        Condition.wait({ Inventory.stream().name(C.UNCLEANED_FIND).isNotEmpty() || Inventory.isFull() }, 300, 30)
-    }
-
-    private fun useAntiqueLamp() {
-        val lamp = Inventory.stream().name(C.ANTIQUE_LAMP).first()
-        if (!lamp.valid()) return
-
-        log("LAMP", "Using Antique lamp on ${lampSkill.displayName}")
-        lamp.interact("Rub")
-
-        Condition.wait({ Widgets.widget(240).valid() }, 300, 10)
-
-        val skillComponent = Widgets.widget(240).component(lampSkill.widgetIndex)
-        if (skillComponent.valid()) {
-            skillComponent.click()
-            Condition.sleep(Random.nextInt(300, 500))
-
-            val confirmBtn = Widgets.widget(240).component(27)
-            if (confirmBtn.valid()) {
-                confirmBtn.click()
+    private fun handleMainLoop() {
+        // Priority 1: Use antique lamps immediately
+        if (MuseumUtils.hasAntiqueLamps()) {
+            if (MuseumUtils.useAntiqueLamp(lampSkill)) {
                 lampsUsed++
-                Condition.sleep(Random.nextInt(400, 600))
             }
-        }
-    }
-
-    private fun shouldBankKeepItems(): Boolean {
-        if (!Inventory.isFull()) return false
-        if (hasUncleanedFinds()) return false
-        if (hasFindsToStore()) return false
-        if (hasJunkToDrop()) return false
-
-        val keepNames = config.keepItemNames
-        if (keepNames.isEmpty()) return false
-
-        return Inventory.stream().any { it.valid() && it.name().lowercase().trim() in keepNames }
-    }
-
-    private fun bankKeepItems(): Boolean {
-        val done = BankUtils.depositAllExceptByName(
-            keepItemNames = C.INITIAL_KEEP_FOR_BANK,
-            preferredBankTile = C.VARROCK_EAST_BANK_TILE
-        )
-        if (done) log("BANK", "Deposited keep items")
-        return done
-    }
-
-    private fun handleDoorAndGate() {
-        C.DOOR_TILES.forEach { doorTile ->
-            val door = Objects.stream().at(doorTile).name(C.MUSEUM_DOOR).first()
-            if (door.valid() && door.actions().contains("Open")) {
-                door.interact("Open")
-                Condition.sleep(Random.nextInt(400, 700))
-            }
+            return
         }
 
-        C.GATE_TILES.forEach { gateTile ->
-            val gate = Objects.stream().at(gateTile).name(C.MUSEUM_GATE).first()
-            if (gate.valid() && gate.actions().contains("Open")) {
-                gate.interact("Open")
-                Condition.sleep(Random.nextInt(400, 700))
-            }
+        // Priority 2: Clean uncleaned finds
+        if (MuseumUtils.hasUncleanedFinds()) {
+            MuseumUtils.cleanSpecimen()
+            return
         }
+
+        // Priority 3: Store artefacts
+        if (MuseumUtils.hasFindsToStore()) {
+            MuseumUtils.storeFinds()
+            return
+        }
+
+        // Priority 4: Drop junk
+        if (MuseumUtils.hasJunkToDrop(keepItemNames)) {
+            MuseumUtils.dropJunkItems(keepItemNames, "main loop")
+            return
+        }
+
+        // Priority 5: Bank kept items if inventory full and nothing else to do
+        if (MuseumUtils.shouldBankKeepItems(keepItemNames)) {
+            MuseumUtils.bankKeepItems()
+            return
+        }
+
+        // Default: Collect more uncleaned finds
+        MuseumUtils.collectUncleanedFinds()
     }
 
-    // --- Requirements ---
-
-    private fun checkSelectedSkillLevelOrStop(): Boolean {
-        val trackedSkill = lampSkill.trackedSkill ?: return true
-
-        return try {
-            val lvl = Skills.realLevel(trackedSkill.index)
-            if (lvl < 10) {
-                log("STARTUP", "${lampSkill.displayName} level is $lvl (<10). Stopping.")
-                controller.stop()
-                false
-            } else true
-        } catch (t: Throwable) {
-            log("STARTUP", "Failed to read level: ${t.message}")
-            true
-        }
-    }
-
-    private fun checkTapToDrop() {
-        val enabled = DropUtils.isTapToDropEnabled()
-        if (!enabled) {
-            log("SETUP", "Tap-to-drop is disabled. Attempting to enable.")
-            DropUtils.enableTapToDrop()
-        }
-    }
-
+    // Paint Setup
     private fun initPaint() {
-        paint = PaintBuilder.newBuilder()
-            .trackSkill(lampSkill.trackedSkill ?: org.powbot.api.rt4.walking.model.Skill.Overall)
-            .addString("Stage") { stage.name }
-            .addString("Lamps Used") { lampsUsed.toString() }
-            .build()
+        val paint = PaintUtil.create {
+            trackSkill(lampSkill.trackedSkill ?: org.powbot.api.rt4.walking.model.Skill.Overall)
+            stat("Stage") { stage.name }
+            stat("Lamps Used") { lampsUsed.toString() }
+        }
         addPaint(paint)
+    }
+
+    // Logging
+    private fun log(tag: String, message: String) {
+        Logger.info(SCRIPT_NAME, tag, message)
     }
 }

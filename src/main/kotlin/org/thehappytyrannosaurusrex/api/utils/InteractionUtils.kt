@@ -4,7 +4,7 @@ import org.powbot.api.Area
 import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
-import org.thehappytyrannosaurusrex.api.utils.InteractionUtils
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils
 
 object InteractionUtils {
 
@@ -105,7 +105,7 @@ object InteractionUtils {
     // -------------------------------------------------------------------------
 
     fun interactInvItem(name: String, action: String? = null): Boolean {
-        val item = findInvItem(name)
+        val item = InventoryUtils.findInvItem(name)
         if (!item.valid()) return false
         return if (action != null) item.interact(action) || item.click() else item.click()
     }
@@ -116,7 +116,7 @@ object InteractionUtils {
     fun drinkInvItem(name: String): Boolean = interactInvItem(name, "Drink")
 
     fun equipInvItem(name: String): Boolean {
-        val item = findInvItem(name)
+        val item = InventoryUtils.findInvItem(name)
         if (!item.valid()) return false
         val equipAction = item.actions().firstOrNull {
             it.equals("Wear", true) || it.equals("Wield", true) || it.equals("Equip", true)
@@ -178,7 +178,7 @@ object InteractionUtils {
         }
 
         fun interactInvItem(id: Int, action: String? = null): Boolean {
-            val item = findInvItem(id)
+            val item = InventoryUtils.findInvItemId(id)
             if (!item.valid()) return false
             return if (action != null) item.interact(action) || item.click() else item.click()
         }

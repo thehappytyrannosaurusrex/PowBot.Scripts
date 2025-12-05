@@ -1,3 +1,5 @@
+package org.thehappytyrannosaurusrex.api.utils
+
 import org.powbot.api.rt4.Inventory
 import org.powbot.api.rt4.Item
 
