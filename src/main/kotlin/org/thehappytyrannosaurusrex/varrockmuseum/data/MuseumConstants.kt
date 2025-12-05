@@ -61,7 +61,7 @@ object MuseumConstants {
     const val QUEST_DIGSITE_ID = 29
 
     // Locations
-    val CLEANING_AREA = Area(Tile(3253, 3440, 0), Tile(3268, 3455, 0))
+    val CLEANING_AREA = Area(Tile(3258, 3442, 0), Tile(3267, 3456, 0))
     val MUSEUM_TARGET_TILE = Tile(3257, 3448, 0)
     val VARROCK_EAST_BANK_TILE = Tile(3254, 3420, 0)
     val TOOLS_TILE = Tile(3259, 3441, 0)

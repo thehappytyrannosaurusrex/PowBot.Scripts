@@ -61,3 +61,6 @@ object StairLanding {
     // Get all stair tiles on a specific floor
     fun stairTilesOnFloor(floor: Int): List<Tile> = LINKS.filter { it.from.floor == floor }.map { it.from }.distinct()
 }
+
+// Alias for backwards compatibility with LibraryNav
+typealias StairLandings = StairLanding

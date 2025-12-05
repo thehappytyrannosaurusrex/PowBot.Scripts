@@ -12,11 +12,13 @@ import org.thehappytyrannosaurusrex.api.ui.CameraInitProfile
 import org.thehappytyrannosaurusrex.api.ui.ViewportUi
 import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.thehappytyrannosaurusrex.api.utils.PaintUtil
+import org.thehappytyrannosaurusrex.api.pathing.DaxUtils
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Config
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Options
 import org.thehappytyrannosaurusrex.varrockmuseum.config.buildConfig
 import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils
+
 
 @ScriptManifest(
     name = "Varrock Museum Cleaner",
@@ -86,6 +88,8 @@ class VarrockMuseumCleaner : AbstractScript() {
     private var startTime: Long = 0L
     var lampsUsed: Int = 0
         private set
+    var xpGained: Int = lampsUsed*500
+        private set
     var currentTask: String = "Starting..."
         private set
 
@@ -145,6 +149,9 @@ class VarrockMuseumCleaner : AbstractScript() {
                 controller.stop()
                 return
             }
+
+            // Dax Blacklists
+            DaxUtils.applyDefaultBlacklist()
 
             log("STARTUP", "Initialization complete. Starting main loop.")
 
@@ -305,11 +312,11 @@ class VarrockMuseumCleaner : AbstractScript() {
             currentTask { currentTask }
             stat("Stage") { stage.name }
             stat("Lamps Used") { lampsUsed.toString() }
+            stat("XP Gained") {xpGained.toString()}
             if (stopAtLevel > 0) {
                 stat("Target Lvl") { "$stopAtLevel (current: ${MuseumUtils.getCurrentLevel(lampSkill)})" }
             }
             stat("Mode") { if (oneTickClick) "1T Click" else "Standard" }
-            runtime { startTime }
         }
         addPaint(paint)
     }

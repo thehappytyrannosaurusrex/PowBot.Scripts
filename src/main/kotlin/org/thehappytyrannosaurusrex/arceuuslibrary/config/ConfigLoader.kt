@@ -1,5 +1,6 @@
 package org.thehappytyrannosaurusrex.arceuuslibrary.config
 
+import org.powbot.api.rt4.Constants
 import org.powbot.api.script.tree.TreeScript
 import org.thehappytyrannosaurusrex.api.utils.Logger
 
@@ -25,13 +26,19 @@ fun TreeScript.buildConfig(): Config {
     val debugLabel = optionOrDefault(Options.Keys.DEBUG_MODE, Options.Values.DEBUG_NONE)
     val debugMode = DebugMode.fromLabel(debugLabel)
 
+    val trackedSkillId = when (xpType) {
+        XpType.MAGIC -> Constants.SKILLS_MAGIC
+        XpType.RUNECRAFTING -> Constants.SKILLS_RUNECRAFTING
+    }
+
     return Config(
         xpType = xpType,
         useGraceful = useGraceful,
         useStamina = useStamina,
         allowTravelItems = allowTravel,
         stopAtLevel = stopAtLevel,
-        debugMode = debugMode
+        debugMode = debugMode,
+        trackedSkillId = trackedSkillId
     ).also {
         Logger.info("[Arceuus Library] CONFIG | ${it.summary()}")
     }

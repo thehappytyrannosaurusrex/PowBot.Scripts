@@ -130,11 +130,12 @@ class CameraController {
     }
 
     private fun clickCompass(actionLabel: String): Boolean {
-        val compass = WidgetIds.ToplevelButtons.COMPASS.component()
+        // Use the function that returns a Component directly
+        val compass = WidgetIds.ToplevelButtons.compass()
         if (!compass.valid()) return false
 
         val actions = compass.actions()
-        val hasExplicitAction = actions.any { it.equals(actionLabel, ignoreCase = true) }
+        val hasExplicitAction = actions.any { action -> action.equals(actionLabel, ignoreCase = true) }
 
         Logger.info("[Camera] Using compass action '$actionLabel'")
 

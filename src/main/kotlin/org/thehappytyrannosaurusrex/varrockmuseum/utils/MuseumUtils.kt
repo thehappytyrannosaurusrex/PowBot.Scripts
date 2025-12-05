@@ -60,9 +60,6 @@ object MuseumUtils {
         }
     }
 
-    /**
-     * Get current level for a skill
-     */
     fun getCurrentLevel(lampSkill: LampSkill): Int {
         val trackedSkill = lampSkill.trackedSkill ?: return 0
         return try {
@@ -72,9 +69,6 @@ object MuseumUtils {
         }
     }
 
-    /**
-     * Check if target level has been reached
-     */
     fun hasReachedTargetLevel(lampSkill: LampSkill, targetLevel: Int): Boolean {
         if (targetLevel <= 0) return false
         return getCurrentLevel(lampSkill) >= targetLevel
@@ -84,55 +78,25 @@ object MuseumUtils {
     // Location Checks
     // =========================================================================
 
-    /**
-     * Check if player is inside the cleaning area
-     */
     fun isInsideCleaningArea(): Boolean {
         val me = Players.local()
         return me.valid() && C.CLEANING_AREA.contains(me.tile())
     }
 
-    /**
-     * Check if player needs to travel to museum
-     */
     fun needsToTravelToMuseum(): Boolean {
         val me = Players.local()
         return me.valid() && !C.CLEANING_AREA.contains(me.tile())
     }
 
-    // =========================================================================
-    // Inventory State Checks (using InventoryUtils)
-    // =========================================================================
+    // Inventory State Checks
 
-    /**
-     * Check if inventory has uncleaned finds
-     */
     fun hasUncleanedFinds(): Boolean = InventoryUtils.invContains(C.UNCLEANED_FIND)
-
-    /**
-     * Check if inventory has antique lamps
-     */
     fun hasAntiqueLamps(): Boolean = InventoryUtils.invContains(C.ANTIQUE_LAMP)
-
-    /**
-     * Check if inventory has artefacts that can be stored in the crate
-     */
     fun hasFindsToStore(): Boolean = InventoryUtils.hasAnyOfNames(allArtefactNamesLc)
-
-    /**
-     * Check if player has all required cleaning tools
-     */
     fun hasAllTools(): Boolean = InventoryUtils.allInInv(C.TROWEL, C.ROCK_PICK, C.SPECIMEN_BRUSH)
-
-    /**
-     * Check if inventory has junk items to drop
-     */
     fun hasJunkToDrop(userKeepNames: Set<String>): Boolean =
         computeJunkItems(userKeepNames).isNotEmpty()
 
-    /**
-     * Check if we should bank user-kept items (inventory full, nothing else to do)
-     */
     fun shouldBankKeepItems(userKeepNames: Set<String>): Boolean {
         if (!InventoryUtils.fullInv()) return false
         if (hasUncleanedFinds()) return false
@@ -295,16 +259,13 @@ object MuseumUtils {
     fun cleanSpecimen(): Boolean {
         if (!hasUncleanedFinds()) return false
 
-        val success = InteractionUtils.useItemOnObject(C.UNCLEANED_FIND, C.SPECIMEN_TABLE)
+        val success = InteractionUtils.interactObject(C.SPECIMEN_TABLE)
         if (!success) {
             log("CLEAN", "Failed to use uncleaned find on specimen table")
             return false
         }
 
-        return Condition.wait(
-            { !hasUncleanedFinds() || InventoryUtils.fullInv() },
-            300, 30
-        )
+        return Condition.wait({ Players.local().animation() == -1 && !hasUncleanedFinds()  }, 2400, 30)
     }
 
     /**
@@ -322,10 +283,10 @@ object MuseumUtils {
 
         // Only interact once
         log("STORE", "Storing finds in crate")
-        crate.interact("Search")
+        crate.click()
 
         // Wait until NO artefacts remain in inventory
-        return Condition.wait({ !hasFindsToStore() }, 300, 30)
+        return Condition.wait({ Players.local().animation() == -1 && !hasFindsToStore() }, 2400, 30)
     }
 
     /**
@@ -333,7 +294,7 @@ object MuseumUtils {
      * Clicks once and waits for inventory to fill.
      */
     fun collectUncleanedFinds(): Boolean {
-        val interacted = InteractionUtils.interactObject(C.SPECIMEN_ROCK, "Take")
+        val interacted = InteractionUtils.interactObject(C.SPECIMEN_ROCK)
         if (!interacted) {
             log("COLLECT", "No specimen rocks found")
             return false
@@ -369,7 +330,7 @@ object MuseumUtils {
             }
 
             // Click the rocks
-            currentRocks.interact("Take")
+            currentRocks.click()
 
             // Wait 400-700ms before next click
             Condition.sleep(Random.nextInt(400, 700))

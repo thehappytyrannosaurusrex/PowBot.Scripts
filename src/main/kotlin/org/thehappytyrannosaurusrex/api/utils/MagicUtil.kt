@@ -19,7 +19,7 @@ object MagicUtil {
     // -------------------------------------------------------------------------
 
     fun isSpellbookOpen(): Boolean {
-        val magic = WidgetIds.SpellbookResizable.ROOT.component()
+        val magic = WidgetIds.SpellbookResizable.root()
         return magic.valid() && magic.visible()
     }
 

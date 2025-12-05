@@ -4,7 +4,7 @@ import org.powbot.api.script.tree.Branch
 import org.powbot.api.script.tree.TreeComponent
 import org.thehappytyrannosaurusrex.arceuuslibrary.ArceuusLibrary
 import org.thehappytyrannosaurusrex.arceuuslibrary.data.Books
-import InventoryUtils
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils
 import org.thehappytyrannosaurusrex.api.utils.Logger
 
 class InventorySanityBranch(script: ArceuusLibrary) :

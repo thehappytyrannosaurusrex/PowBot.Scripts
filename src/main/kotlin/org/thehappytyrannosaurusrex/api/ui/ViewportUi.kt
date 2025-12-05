@@ -1,6 +1,7 @@
 package org.thehappytyrannosaurusrex.api.ui
 
 import org.powbot.api.Condition
+import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Widgets
 import org.thehappytyrannosaurusrex.api.data.WidgetIds
@@ -27,12 +28,12 @@ class ViewportUi {
     // -------------------------------------------------------------------------
 
     private fun isChatBoxExpanded(): Boolean {
-        val header = WidgetIds.Chatbox.HEADER.component()
+        val header = WidgetIds.Chatbox.header()
         return header.valid() && header.visible()
     }
 
     private fun isInventoryOverlayOpen(): Boolean {
-        val root = WidgetIds.InventoryResizable.ROOT.component()
+        val root = WidgetIds.InventoryResizable.root()
         return root.valid() && root.visible()
     }
 
@@ -43,11 +44,11 @@ class ViewportUi {
                 return
             }
 
-            val toggle = WidgetIds.ToplevelButtons.CHAT_TOGGLE.component()
+            val toggle = WidgetIds.ToplevelButtons.chatToggle()
             if (!toggle.valid()) return
 
             val actions = toggle.actions()
-            val hasToggle = actions.any { it.equals("Toggle chat", ignoreCase = true) }
+            val hasToggle = actions.any { action -> action.equals("Toggle chat", ignoreCase = true) }
 
             Logger.info("[Viewport] Minimising chat box.")
 

@@ -6,9 +6,12 @@ import org.powbot.api.rt4.Inventory
 import org.powbot.api.rt4.Item
 import org.powbot.api.rt4.Movement
 import org.powbot.api.rt4.Players
-import org.thehappytyrannosaurusrex.api.utils.InteractionUtils.findInvItem
 
 object BankUtils {
+
+    // =========================================================================
+    // Deposit Operations
+    // =========================================================================
 
     fun depositInventoryToNearestBank(
         preferredBankTile: Tile? = null,
@@ -57,6 +60,7 @@ object BankUtils {
                 Inventory.stream()
                     .filter { it.valid() && it.name().lowercase().trim() !in normalizedKeep }
                     .forEach { item ->
+                        // Use item ID with Bank.Amount enum - correct PowBot API signature
                         Bank.deposit(item.id(), Bank.Amount.ALL)
                     }
             } else {
@@ -65,7 +69,9 @@ object BankUtils {
         }
     }
 
-
+    // =========================================================================
+    // Withdraw Operations
+    // =========================================================================
 
     // Withdraw item by ID
     fun withdrawItemById(id: Int, amount: Int = 1): Boolean {
@@ -73,27 +79,53 @@ object BankUtils {
         return Bank.withdraw(id, amount)
     }
 
-    // Check if bank has item
-    fun hasBankItem(name: String): Boolean = Bank.stream().name(name).isNotEmpty()
-    fun hasBankItemById(id: Int): Boolean = Bank.stream().id(id).isNotEmpty()
-    fun findBankItem(name: String): Item = Bank.stream().name(name).first()
-
     // Withdraw item by name
     fun withdrawItem(name: String, amount: Int = 1): Boolean {
         if (!Bank.opened()) return false
         val item = findBankItem(name)
         if (!item.valid()) return false
-        return Bank.withdraw(item, amount)
+        return Bank.withdraw(item.id(), amount)
     }
+
+    // =========================================================================
+    // Bank Item Checks
+    // =========================================================================
+
+    fun hasBankItem(name: String): Boolean = Bank.stream().name(name).isNotEmpty()
+    fun hasBankItemById(id: Int): Boolean = Bank.stream().id(id).isNotEmpty()
+    fun findBankItem(name: String): Item = Bank.stream().name(name).first()
+
+    // =========================================================================
+    // Deposit Single Item
+    // =========================================================================
 
     fun depositInvItem(name: String, amount: Int = -1): Boolean {
         if (!Bank.opened()) return false
-        val item = findInvItem(name)
+        val item = Inventory.stream().name(name).first()
         if (!item.valid()) return false
-        return if (amount == -1) Bank.deposit(item, Bank.Amount.ALL) else Bank.deposit(item, amount)
+        // Use item ID with Bank.Amount or int - correct PowBot API signature
+        return if (amount == -1) {
+            Bank.deposit(item.id(), Bank.Amount.ALL)
+        } else {
+            Bank.deposit(item.id(), amount)
+        }
     }
 
+    fun depositInvItemById(id: Int, amount: Int = -1): Boolean {
+        if (!Bank.opened()) return false
+        val item = Inventory.stream().id(id).first()
+        if (!item.valid()) return false
+        return if (amount == -1) {
+            Bank.deposit(item.id(), Bank.Amount.ALL)
+        } else {
+            Bank.deposit(item.id(), amount)
+        }
+    }
+
+    // =========================================================================
     // Internal: handles walking to bank and opening
+    // =========================================================================
+
     private fun depositToNearestBankInternal(
         preferredBankTile: Tile?,
         maxPreferredDistance: Double,

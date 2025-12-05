@@ -26,6 +26,7 @@ import org.thehappytyrannosaurusrex.api.utils.ScriptUtils
 import org.thehappytyrannosaurusrex.arceuuslibrary.state.LibraryState
 import org.thehappytyrannosaurusrex.arceuuslibrary.state.LibraryNpcs
 import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryChatEvent
+import org.thehappytyrannosaurusrex.arceuuslibrary.solver.LibraryDebugController
 
 
 @ScriptManifest(

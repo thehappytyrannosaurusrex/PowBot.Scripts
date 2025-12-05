@@ -128,6 +128,12 @@ object RunePouch {
         return false
     }
 
+    /**
+     * Empty the rune pouch while at a bank (empties into inventory, then deposits).
+     * Alias for emptyCompletely() for backwards compatibility.
+     */
+    fun emptyAtBank(): Boolean = emptyCompletely()
+
     // -------------------------------------------------------------------------
     // Bank Operations
     // -------------------------------------------------------------------------
@@ -151,10 +157,12 @@ object RunePouch {
 
         if (clearBeforeFill) {
             if (!emptyCompletely()) return null
-            // Deposit emptied runes
+            // Deposit emptied runes using item ID (correct PowBot API)
             runeIds.forEach { runeId ->
                 val item = Inventory.stream().id(runeId).first()
-                if (item.valid()) Bank.deposit(item, Bank.Amount.ALL)
+                if (item.valid()) {
+                    Bank.deposit(item.id(), Bank.Amount.ALL)
+                }
             }
         }
 

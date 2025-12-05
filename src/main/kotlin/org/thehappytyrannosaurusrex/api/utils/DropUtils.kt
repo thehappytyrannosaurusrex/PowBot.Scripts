@@ -156,12 +156,27 @@ object DropUtils {
     }
 
     private fun clickAllSettingsButton(): Boolean {
-        val button = WidgetIds.SettingsTab.ALL_SETTINGS_BUTTON.component()
-        if (!button.valid() || !button.visible()) return false
-        val clicked = button.click() || button.interact("All Settings")
-        if (!clicked) return false
-        Condition.sleep(Random.nextInt(400, 700))
-        return true
+        // Try direct index first
+        val button = WidgetIds.SettingsTab.allSettingsButton()
+        if (button.valid() && button.visible()) {
+            val clicked = button.click() || button.interact("All Settings")
+            if (clicked) {
+                Condition.sleep(Random.nextInt(400, 700))
+                return true
+            }
+        }
+
+        // Fallback: search by action
+        val buttonByAction = WidgetIds.SettingsTab.findAllSettingsButton()
+        if (buttonByAction.valid()) {
+            val clicked = buttonByAction.click() || buttonByAction.interact("All Settings")
+            if (clicked) {
+                Condition.sleep(Random.nextInt(400, 700))
+                return true
+            }
+        }
+
+        return false
     }
 
     private fun waitForAllSettingsPanel(): Boolean {
@@ -170,7 +185,7 @@ object DropUtils {
     }
 
     private fun searchForTapToDrop(): Boolean {
-        val searchBar = WidgetIds.AllSettingsPanel.SEARCH_BAR.component()
+        val searchBar = WidgetIds.AllSettingsPanel.searchBar()
         if (!searchBar.valid() || !searchBar.visible()) return false
 
         val clicked = searchBar.click() || searchBar.interact("Show keyboard")
@@ -209,8 +224,8 @@ object DropUtils {
     }
 
     private fun clickTapToDropToggle(): Boolean {
-        val toggle = WidgetIds.AllSettingsPanel.TAP_TO_DROP_TOGGLE.component()
-
+        // Try direct index first
+        val toggle = WidgetIds.AllSettingsPanel.tapToDropToggle()
         if (toggle.valid() && toggle.visible()) {
             val clicked = toggle.click() || toggle.interact("Toggle")
             if (clicked) {
@@ -219,31 +234,39 @@ object DropUtils {
             }
         }
 
-        // Fallback: search by text
-        val toggleByText = Components.stream()
-            .widget(WidgetIds.AllSettingsPanel.GROUP)
-            .textContains("Tap to drop")
-            .viewable()
-            .first()
-
+        // Fallback: search by text using Components.stream()
+        val toggleByText = WidgetIds.AllSettingsPanel.findTapToDropToggle()
         if (toggleByText.valid()) {
             val clicked = toggleByText.click() || toggleByText.interact("Toggle")
             if (clicked) {
-                Condition.sleep(Random.nextInt(300, 500))
+                Condition.sleep(Random.nextInt(900, 1300))
                 return true
             }
         }
+
         return false
     }
 
     private fun closeSettingsPanel() {
-        val closeBtn = WidgetIds.AllSettingsPanel.CLOSE_BUTTON.component()
+        // Try direct index first
+        val closeBtn = WidgetIds.AllSettingsPanel.closeButton()
         if (closeBtn.valid() && closeBtn.visible()) {
             if (closeBtn.click() || closeBtn.interact("Close")) {
                 Condition.sleep(Random.nextInt(200, 400))
                 return
             }
         }
+
+        // Fallback: search by action
+        val closeBtnByAction = WidgetIds.AllSettingsPanel.findCloseButton()
+        if (closeBtnByAction.valid()) {
+            if (closeBtnByAction.click() || closeBtnByAction.interact("Close")) {
+                Condition.sleep(Random.nextInt(200, 400))
+                return
+            }
+        }
+
+        // Last resort: just switch tabs
         Game.tab(Game.Tab.INVENTORY)
         Condition.sleep(Random.nextInt(200, 400))
     }
