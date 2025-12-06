@@ -5,6 +5,9 @@ import org.powbot.api.script.OptionType
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.ScriptConfiguration
 import org.powbot.api.script.ScriptManifest
+import org.powbot.api.Condition
+import org.powbot.api.Notifications
+import org.powbot.mobile.script.ScriptManager
 import org.thehappytyrannosaurusrex.api.inventory.DropUtils
 import org.thehappytyrannosaurusrex.api.pathing.DaxUtils
 import org.thehappytyrannosaurusrex.api.ui.CameraController
@@ -12,16 +15,20 @@ import org.thehappytyrannosaurusrex.api.ui.CameraInitProfile
 import org.thehappytyrannosaurusrex.api.ui.ViewportUi
 import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.thehappytyrannosaurusrex.api.utils.PaintUtil
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.fullInv
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.invContains
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Config
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
 import org.thehappytyrannosaurusrex.varrockmuseum.config.Options
 import org.thehappytyrannosaurusrex.varrockmuseum.config.buildConfig
+import org.thehappytyrannosaurusrex.varrockmuseum.data.MuseumConstants
 import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils
+import kotlin.random.Random
 
 @ScriptManifest(
     name = "Varrock Museum Cleaner",
     description = "Cleans Varrock Museum specimens and uses Antique lamps on a chosen skill.",
-    version = "4.0.0",
+    version = "1.1.2",
     author = "thehappytyrannosaurusrex",
     category = ScriptCategory.Other
 )
@@ -45,19 +52,19 @@ import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils
         ),
         ScriptConfiguration(
             name = Options.Keys.KEEP_ITEMS,
-            description = "Comma-separated item names to NEVER drop (Coins always kept). They can still be banked.",
+            description = "Comma-separated item names to NEVER drop. They can still be banked.",
             optionType = OptionType.STRING,
-            defaultValue = "Coins"
+            defaultValue = "Coins,"
         ),
         ScriptConfiguration(
             name = Options.Keys.STOP_AT_LEVEL,
-            description = "Stop when reaching this level (0 = never stop).",
+            description = "Stop at target (0 = never stop).",
             optionType = OptionType.INTEGER,
             defaultValue = "0"
         ),
         ScriptConfiguration(
             name = Options.Keys.ONE_TICK_CLICK,
-            description = "1T Click: Click rocks every 300-600ms (faster). Default: click once and wait.",
+            description = "1T Click: Click rocks every 400-600ms .",
             optionType = OptionType.BOOLEAN,
             defaultValue = "false"
         )
@@ -66,13 +73,10 @@ import org.thehappytyrannosaurusrex.varrockmuseum.utils.MuseumUtils
 class VarrockMuseumCleaner : AbstractScript() {
 
     companion object {
-        private const val SCRIPT_NAME = "Varrock Museum"
+        private const val SCRIPT_NAME = "Varrock Museum Cleaner"
     }
 
-    // =========================================================================
     // Script Stages
-    // =========================================================================
-
     enum class Stage {
         STARTUP_USE_LAMPS,        // Use any lamps at startup
         STARTUP_DROP_JUNK,        // Drop junk items
@@ -84,10 +88,7 @@ class VarrockMuseumCleaner : AbstractScript() {
         MAIN_LOOP                 // Main cleaning loop
     }
 
-    // =========================================================================
     // Script State
-    // =========================================================================
-
     private var stage = Stage.STARTUP_USE_LAMPS
     private lateinit var config: Config
     private var startTime: Long = 0L
@@ -123,35 +124,26 @@ class VarrockMuseumCleaner : AbstractScript() {
             if (stopAtLevel > 0) log("STARTUP", "Stop at level: $stopAtLevel")
             if (oneTickClick) log("STARTUP", "1T Click mode: ENABLED")
 
-            // 2. Setup camera and viewport
             cameraController.init(CameraInitProfile(yaw = 190, zoom = 10.0, minPitch = 85, maxPitch = 95))
-            viewportUi.tidyOnStart()
 
-            // 4. Check and enable tap to drop
             DropUtils.enableTapToDrop()
-
-            // 3. Ensure inventory tab open
             DropUtils.ensureInventoryTab()
-
-            // 5. Build and add paint overlay
             initPaint()
 
-            // 6. Requirements check - cleaning area
             if (!MuseumUtils.isInsideCleaningArea()) {
                 log("STARTUP", "Not in cleaning area - will travel there after startup checks")
             }
-
-            // 7. Requirements check - quest
             if (!MuseumUtils.isDigSiteCompleted()) {
                 log("STARTUP", "The Dig Site quest is NOT completed. Stopping script.")
-                controller.stop()
+                Notifications.showNotification("The Dig Site quest is NOT completed. Stopping script.")
+                ScriptManager.stop()
                 return
             }
 
             // 8. Requirements check - skill level
             if (!MuseumUtils.isSkillLevelSufficient(lampSkill)) {
                 log("STARTUP", "${lampSkill.displayName} level is < 10. Cannot use lamps. Stopping.")
-                controller.stop()
+                ScriptManager.stop()
                 return
             }
 
@@ -162,24 +154,15 @@ class VarrockMuseumCleaner : AbstractScript() {
 
         } catch (t: Throwable) {
             log("STARTUP", "Exception during onStart: ${t.message}")
-            controller.stop()
+            ScriptManager.stop()
         }
     }
-
-    // =========================================================================
-    // Lifecycle - onStop
-    // =========================================================================
 
     override fun onStop() {
         log("STOP", "Script stopped. Lamps used: $lampsUsed, XP gained: ${lampsUsed * 500}")
     }
 
-    // =========================================================================
-    // Main Loop (poll)
-    // =========================================================================
-
     override fun poll() {
-        // Check stop conditions first
         if (checkStopAtLevel()) return
 
         when (stage) {
@@ -194,48 +177,35 @@ class VarrockMuseumCleaner : AbstractScript() {
         }
     }
 
-    // =========================================================================
-    // Stop Conditions
-    // =========================================================================
-
     private fun checkStopAtLevel(): Boolean {
         if (stopAtLevel <= 0) return false
 
         if (MuseumUtils.hasReachedTargetLevel(lampSkill, stopAtLevel)) {
             val current = MuseumUtils.getCurrentLevel(lampSkill)
             log("STOP", "Reached target level $stopAtLevel (current: $current). Stopping.")
-            currentTask = "Target reached!"
-            controller.stop()
+            currentTask = "Target level reached!"
+            ScriptManager.stop()
             return true
         }
         return false
     }
 
-    // =========================================================================
-    // Stage Handlers - Startup
-    // =========================================================================
-
-    /**
-     * Stage 1: Use any antique lamps we have at startup
-     */
+    // Stage 1: Use any antique lamps we have at startup
     private fun handleStartupUseLamps() {
         currentTask = "Startup: Using lamps"
         log("STAGE", "STARTUP_USE_LAMPS")
 
-        if (MuseumUtils.hasAntiqueLamps()) {
+        if (MuseumUtils.hasLamps()) {
             if (MuseumUtils.useAntiqueLamp(lampSkill)) {
                 lampsUsed++
             }
             return // Stay in this stage until all lamps used
         }
-
         // No more lamps, advance to next stage
         stage = Stage.STARTUP_DROP_JUNK
     }
 
-    /**
-     * Stage 2: Drop junk items (unique artefacts, storage rewards)
-     */
+    // Stage 2: Drop junk items (unique artefacts, storage rewards)
     private fun handleStartupDropJunk() {
         currentTask = "Startup: Dropping junk"
         log("STAGE", "STARTUP_DROP_JUNK")
@@ -249,9 +219,7 @@ class VarrockMuseumCleaner : AbstractScript() {
         stage = Stage.STARTUP_BANK_EQUIPMENT
     }
 
-    /**
-     * Stage 3: Check equipment - bank wrong items in hands/feet slots
-     */
+    // Stage 3: Check equipment, bank wrong items in hands/feet slots
     private fun handleStartupBankEquipment() {
         currentTask = "Startup: Checking equipment"
         log("STAGE", "STARTUP_BANK_EQUIPMENT")
@@ -268,9 +236,7 @@ class VarrockMuseumCleaner : AbstractScript() {
         stage = Stage.STARTUP_BANK_ITEMS
     }
 
-    /**
-     * Stage 4: Bank any items that shouldn't be in inventory
-     */
+    // Stage 4: Bank any items that shouldn't be in inventory
     private fun handleStartupBankItems() {
         currentTask = "Startup: Checking inventory"
         log("STAGE", "STARTUP_BANK_ITEMS")
@@ -287,13 +253,7 @@ class VarrockMuseumCleaner : AbstractScript() {
         stage = Stage.TRAVEL_TO_MUSEUM
     }
 
-    // =========================================================================
-    // Stage Handlers - Travel and Setup
-    // =========================================================================
-
-    /**
-     * Stage 5: Travel to the museum cleaning area
-     */
+    // Stage 5: Travel to the museum cleaning area
     private fun handleTravelToMuseum() {
         currentTask = "Traveling to museum"
         log("STAGE", "TRAVEL_TO_MUSEUM")
@@ -307,9 +267,8 @@ class VarrockMuseumCleaner : AbstractScript() {
         MuseumUtils.travelToMuseum()
     }
 
-    /**
-     * Stage 6: Get tools and equip leather
-     */
+
+    // Stage 6: Get tools and equip leather
     private fun handleEnsureTools() {
         currentTask = "Getting tools"
         log("STAGE", "ENSURE_TOOLS")
@@ -335,9 +294,7 @@ class VarrockMuseumCleaner : AbstractScript() {
         }
     }
 
-    /**
-     * Stage 7: Process semi-clean inventory (uncleaned finds / common artefacts)
-     */
+    // Stage 7: Process semi-clean inventory (uncleaned finds / common artefacts)
     private fun handleNormaliseInventory() {
         currentTask = "Normalizing inventory"
         log("STAGE", "NORMALISE_INVENTORY")
@@ -368,16 +325,42 @@ class VarrockMuseumCleaner : AbstractScript() {
         stage = Stage.MAIN_LOOP
     }
 
-    // =========================================================================
-    // Stage Handlers - Main Loop
-    // =========================================================================
-
-    /**
-     * Main loop - the core activity
-     */
+    // Main Loop
     private fun handleMainLoop() {
-        // Priority 1: Fill inventory with uncleaned finds if not full
-        if (!org.powbot.api.rt4.Inventory.isFull() && !MuseumUtils.hasUncleanedFinds()) {
+
+        // Priority 1: Use antique lamps
+        if (MuseumUtils.hasLamps()) {
+            currentTask = "Using lamp"
+            if (MuseumUtils.useAntiqueLamp(lampSkill)) {
+                lampsUsed++
+            }
+            return
+        }
+
+        // Priority 2: Drop junk items (do this before collecting/cleaning/storing)
+        if (MuseumUtils.hasJunkToDrop(keepItemNames)) {
+            currentTask = "Dropping junk"
+            MuseumUtils.dropJunkItems(keepItemNames)
+            return
+        }
+
+        // Priority 3: Clean uncleaned finds
+        if (MuseumUtils.hasUncleanedFinds()) {
+            currentTask = "Cleaning finds"
+            MuseumUtils.cleanSpecimen()
+            return
+        }
+
+        // Priority 4: Store common artefacts
+        if (MuseumUtils.hasCommonArtefacts() && fullInv()) {
+            currentTask = "Storing artefacts"
+            MuseumUtils.storeFinds()
+            return
+        }
+
+        // Priority 5: Collect uncleaned finds (only when inventory is ready)
+        // This should only trigger when we have a clean inventory with just tools
+        if (!fullInv()) {
             currentTask = if (oneTickClick) "1T Collecting finds" else "Collecting finds"
             if (oneTickClick) {
                 MuseumUtils.collectUncleanedFinds1T()
@@ -387,62 +370,24 @@ class VarrockMuseumCleaner : AbstractScript() {
             return
         }
 
-        // Priority 2: Clean uncleaned finds
-        if (MuseumUtils.hasUncleanedFinds()) {
-            currentTask = "Cleaning finds"
-            MuseumUtils.cleanSpecimen()
-            return
-        }
-
-        // Priority 3: Store common artefacts
-        if (MuseumUtils.hasCommonArtefacts()) {
-            currentTask = "Storing artefacts"
-            MuseumUtils.storeFinds()
-            return
-        }
-
-        // Priority 4: Use antique lamps
-        if (MuseumUtils.hasAntiqueLamps()) {
-            currentTask = "Using lamp"
-            if (MuseumUtils.useAntiqueLamp(lampSkill)) {
-                lampsUsed++
-            }
-            return
-        }
-
-        // Priority 5: Drop junk items
-        if (MuseumUtils.hasJunkToDrop(keepItemNames)) {
-            currentTask = "Dropping junk"
-            MuseumUtils.dropJunkItems(keepItemNames)
-            return
-        }
-
-        // Default: Go collect more finds (loop back to priority 1)
-        currentTask = "Ready for next round"
+        // Default: Idle (should rarely reach here)
+        currentTask = "Idle - waiting"
+        Condition.sleep(Random.nextInt(600, 1200))
     }
 
-    // =========================================================================
     // Paint Setup
-    // =========================================================================
-
     private fun initPaint() {
         val paint = PaintUtil.create {
             trackSkill(lampSkill.trackedSkill ?: org.powbot.api.rt4.walking.model.Skill.Overall)
             currentTask { currentTask }
-            stat("Stage") { stage.name }
             stat("Lamps Used") { lampsUsed.toString() }
             stat("XP Gained") { (lampsUsed * 500).toString() }
             if (stopAtLevel > 0) {
                 stat("Target Lvl") { "$stopAtLevel (current: ${MuseumUtils.getCurrentLevel(lampSkill)})" }
             }
-            stat("Mode") { if (oneTickClick) "1T Click" else "Standard" }
         }
         addPaint(paint)
     }
-
-    // =========================================================================
-    // Logging
-    // =========================================================================
 
     private fun log(tag: String, message: String) {
         Logger.info(SCRIPT_NAME, tag, message)

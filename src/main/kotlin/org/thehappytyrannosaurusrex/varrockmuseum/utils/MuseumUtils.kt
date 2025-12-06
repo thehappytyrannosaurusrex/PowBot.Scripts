@@ -4,30 +4,30 @@ import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
-import org.thehappytyrannosaurusrex.api.chat.DialogueHandler
+import org.thehappytyrannosaurusrex.api.chat.DialogueHandler.handleDialogue
+import org.thehappytyrannosaurusrex.api.chat.DialogueHandler.dialogueInput
 import org.thehappytyrannosaurusrex.api.inventory.DropUtils
 import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.invContains
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.anyInInv
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.findInvItem
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.countInInv
 import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.fullInv
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.freeSlots
 import org.thehappytyrannosaurusrex.api.utils.InventoryUtils.setContainsLower
 import org.thehappytyrannosaurusrex.api.utils.InteractionUtils.findObject
+import org.thehappytyrannosaurusrex.api.utils.InteractionUtils.interactObject
 import org.thehappytyrannosaurusrex.api.utils.Logger
 import org.thehappytyrannosaurusrex.varrockmuseum.config.LampSkill
 import org.thehappytyrannosaurusrex.varrockmuseum.data.MuseumConstants as C
 
-/**
- * Stateless utility functions for Varrock Museum script.
- * All game logic and interactions are contained here.
- *
- * All wait conditions check for script running state to prevent
- * infinite loops when script is paused/stopped.
- */
+
 object MuseumUtils {
 
-    private const val SCRIPT_NAME = "Varrock Museum"
+    private const val SCRIPT_NAME = "Varrock Museum Cleaner"
 
     private fun log(tag: String, message: String) = Logger.info(SCRIPT_NAME, tag, message)
 
-    // Pre-computed lowercase sets for performance
+    // Lowercase sets for performance
     private val cleaningToolsLc = C.CLEANING_TOOLS.map { it.lowercase() }.toSet()
     private val leatherEquipmentLc = C.LEATHER_EQUIPMENT.map { it.lowercase() }.toSet()
     private val commonArtefactsLc = C.COMMON_ARTEFACT_NAMES.map { it.lowercase() }.toSet()
@@ -36,10 +36,7 @@ object MuseumUtils {
     private val scriptKeepLc = C.SCRIPT_KEEP_ITEMS.map { it.lowercase() }.toSet()
     private val allowedInvLc = C.ALLOWED_INVENTORY_ITEMS.map { it.lowercase() }.toSet()
 
-    // =========================================================================
-    // Script Running Check (prevents infinite waits)
-    // =========================================================================
-
+    // Script Running Check to stop inf loop
     private fun isScriptRunning(): Boolean {
         return try {
             !ScriptManager.isStopping() && !ScriptManager.isPaused()
@@ -58,10 +55,8 @@ object MuseumUtils {
         return condition() // Final check
     }
 
-    // =========================================================================
-    // Quest / Requirements Checks
-    // =========================================================================
 
+    // Quest / Requirements Checks
     fun isDigSiteCompleted(): Boolean {
         return try {
             Quests.Quest.THE_DIG_SITE.completed()
@@ -99,21 +94,15 @@ object MuseumUtils {
         return getCurrentLevel(lampSkill) >= targetLevel
     }
 
-    // =========================================================================
     // Location Checks
-    // =========================================================================
-
     fun isInsideCleaningArea(): Boolean {
         val me = Players.local()
         return me.valid() && C.CLEANING_AREA.contains(me.tile())
     }
 
-    // =========================================================================
     // Inventory State Checks
-    // =========================================================================
-
-    fun hasAntiqueLamps(): Boolean =
-        invContains(C.ANTIQUE_LAMP)
+    fun hasLamps(): Boolean =
+        anyInInv(C.ANTIQUE_LAMP, C.LAMP)
 
     fun hasUncleanedFinds(): Boolean =
         invContains(C.UNCLEANED_FIND)
@@ -159,7 +148,6 @@ object MuseumUtils {
         }
     }
 
-
     fun hasItemsToBank(userKeepItems: Set<String>): Boolean {
         val userKeepLc = userKeepItems.map { it.lowercase() }.toSet()
         return Inventory.stream().any { item ->
@@ -171,14 +159,12 @@ object MuseumUtils {
         }
     }
 
-    /**
-     * A 'clean' inventory = max 1 of each tool + no items that need banking
-     */
+    // A 'clean' inventory = max 1 of each tool + no items that need banking
     fun hasCleanInventory(userKeepItems: Set<String>): Boolean {
         // Check for duplicate tools
-        if (Inventory.stream().name(C.TROWEL).count() > 1) return false
-        if (Inventory.stream().name(C.ROCK_PICK).count() > 1) return false
-        if (Inventory.stream().name(C.SPECIMEN_BRUSH).count() > 1) return false
+        if (countInInv(C.TROWEL) > 1) return false
+        if (countInInv(C.ROCK_PICK) > 1) return false
+        if (countInInv(C.SPECIMEN_BRUSH) > 1) return false
 
         // Check for items that need banking
         if (hasItemsToBank(userKeepItems)) return false
@@ -189,22 +175,18 @@ object MuseumUtils {
         return true
     }
 
-    /**
-     * A 'semi-clean' inventory = clean but may have uncleaned finds or common artefacts
-     */
+
+    // A 'semi-clean' inventory = clean but may have uncleaned finds or common artefacts
     fun hasSemiCleanInventory(userKeepItems: Set<String>): Boolean {
         if (!hasCleanInventory(userKeepItems)) return false
         return hasUncleanedFinds() || hasCommonArtefacts()
     }
 
-    // =========================================================================
-    // Actions - Drop Items
-    // =========================================================================
 
-    /**
-     * Drop all junk items (unique artefacts, storage rewards, unremarkable finds).
-     * Respects user's keep items and script keep items.
-     */
+
+
+    // Drop all junk items (unique artefacts, storage rewards, unremarkable finds).
+    // Respects user's keep items and script keep items.
     fun dropJunkItems(userKeepItems: Set<String>): Boolean {
         val userKeepLc = userKeepItems.map { it.lowercase() }.toSet()
         val combinedKeep = scriptKeepLc + userKeepLc
@@ -226,9 +208,7 @@ object MuseumUtils {
         return true
     }
 
-    /**
-     * Drop duplicate tools (keep only 1 of each)
-     */
+    // Drop duplicate tools (keep only 1 of each)
     fun dropDuplicateTools(): Boolean {
         var dropped = false
 
@@ -249,17 +229,13 @@ object MuseumUtils {
         return dropped
     }
 
-    // =========================================================================
-    // Actions - Equipment Management
-    // =========================================================================
 
-    /**
-     * Equip leather gloves if in inventory and not equipped
-     */
+
+    // Equip leather gloves if in inventory and not equipped
     fun equipLeatherGloves(): Boolean {
         if (hasLeatherGlovesEquipped()) return true
 
-        val gloves = Inventory.stream().name(C.LEATHER_GLOVES).first()
+        val gloves = findInvItem(C.LEATHER_GLOVES)
         if (!gloves.valid()) return false
 
         log("EQUIP", "Equipping leather gloves")
@@ -270,13 +246,11 @@ object MuseumUtils {
         return hasLeatherGlovesEquipped()
     }
 
-    /**
-     * Equip leather boots if in inventory and not equipped
-     */
+    // Equip leather boots if in inventory and not equipped
     fun equipLeatherBoots(): Boolean {
         if (hasLeatherBootsEquipped()) return true
 
-        val boots = Inventory.stream().name(C.LEATHER_BOOTS).first()
+        val boots = findInvItem(C.LEATHER_BOOTS)
         if (!boots.valid()) return false
 
         log("EQUIP", "Equipping leather boots")
@@ -287,9 +261,7 @@ object MuseumUtils {
         return hasLeatherBootsEquipped()
     }
 
-    /**
-     * Unequip item from a slot
-     */
+    // Unequip item from a slot
     fun unequipSlot(slot: Equipment.Slot): Boolean {
         val item = Equipment.itemAt(slot)
         if (!item.valid()) return true
@@ -298,13 +270,8 @@ object MuseumUtils {
         return item.interact("Remove") || item.click()
     }
 
-    // =========================================================================
-    // Actions - Banking
-    // =========================================================================
 
-    /**
-     * Bank items that shouldn't be in inventory (not tools/leather/finds/keep items)
-     */
+    // Bank items that shouldn't be in inventory at Varrock East Bank (not tools/leather/finds/keep items)
     fun bankUnwantedItems(userKeepItems: Set<String>): Boolean {
         val userKeepLc = userKeepItems.map { it.lowercase() }.toSet()
         val keepSet = allowedInvLc + cleaningToolsLc + leatherEquipmentLc + userKeepLc
@@ -330,7 +297,7 @@ object MuseumUtils {
             val nameLc = item.name().lowercase()
             if (!keepSet.contains(nameLc) && item.valid()) {
                 Bank.deposit(item.id(), Bank.Amount.ALL)
-                Condition.sleep(Random.nextInt(100, 200))
+                Condition.sleep(Random.nextInt(200, 400))
                 deposited = true
             }
         }
@@ -343,9 +310,8 @@ object MuseumUtils {
         return !hasItemsToBank(userKeepItems)
     }
 
-    /**
-     * Bank wrong equipment from hands/feet slots
-     */
+
+    // Bank wrong equipment from hands/feet slots
     fun bankWrongEquipment(): Boolean {
         if (!hasWrongEquipment()) return true
 
@@ -390,13 +356,8 @@ object MuseumUtils {
         return !hasWrongEquipment()
     }
 
-    // =========================================================================
-    // Actions - Travel
-    // =========================================================================
 
-    /**
-     * Travel to museum cleaning area via door or gate (whichever is closest)
-     */
+    // Travel to museum cleaning area via door or gate (whichever is closest)
     fun travelToMuseum(): Boolean {
         if (isInsideCleaningArea()) {
             log("TRAVEL", "Already inside cleaning area")
@@ -408,23 +369,20 @@ object MuseumUtils {
 
         val myTile = me.tile()
         val distToDoor = myTile.distanceTo(C.BACK_DOOR_TILE)
-        val distToGate = myTile.distanceTo(C.GATE_TILE)
 
-        // If far from both, walk closer first
-        if (distToDoor > 20 && distToGate > 20) {
-            log("TRAVEL", "Walking to museum area")
-            Movement.walkTo(C.MUSEUM_TARGET_TILE)
-            safeWait({ myTile.distanceTo(C.BACK_DOOR_TILE) < 15 || myTile.distanceTo(C.GATE_TILE) < 15 }, 600, 20)
+        // If far from the door, walk closer first
+        if (distToDoor > 5) {
+            log("TRAVEL", "Walking to museum door area")
+            Movement.walkTo(C.BACK_DOOR_TILE)
+            // Wait until close enough to attempt the door
+            safeWait({ Players.local().tile().distanceTo(C.BACK_DOOR_TILE) < 15 }, 600, 20)
             return false
         }
 
-        // Use whichever is closer
-        if (distToDoor <= distToGate) {
-            return enterViaDoor()
-        } else {
-            return enterViaGate()
-        }
+        // Try entering via the door
+        return enterViaDoor()
     }
+
 
     private fun enterViaDoor(): Boolean {
         val door = Objects.stream().within(10).name(C.MUSEUM_DOOR).action("Open").nearest().first()
@@ -435,81 +393,53 @@ object MuseumUtils {
         }
 
         log("TRAVEL", "Opening door")
-        door.interact("Open")
+        door.interact("Open") || door.click()
         return safeWait({ isInsideCleaningArea() }, 300, 15)
     }
 
-    private fun enterViaGate(): Boolean {
-        val gate = Objects.stream().within(10).name(C.MUSEUM_GATE).action("Open").nearest().first()
-        if (!gate.valid()) {
-            log("TRAVEL", "No gate found, walking closer")
-            Movement.walkTo(C.GATE_TILE)
-            return false
-        }
 
-        log("TRAVEL", "Opening gate")
-        gate.interact("Open")
-
-        // Gate may trigger chat dialogue
-        Condition.sleep(Random.nextInt(600, 900))
-        if (Chat.chatting() || Chat.canContinue()) {
-            DialogueHandler.handleDialogue()
-        }
-
-        return safeWait({ isInsideCleaningArea() }, 300, 15)
-    }
-
-    // =========================================================================
-    // Actions - Tool Management
-    // =========================================================================
-
-    /**
-     * Take tools from the tool rack. Handles dialogue popup.
-     */
+    // Take tools from the tool rack. Handles dialogue popup.
     fun takeTools(): Boolean {
         if (hasAllTools()) {
             log("KIT", "All tools already present")
             return true
         }
 
-        val toolsObj = Objects.stream().name(C.TOOL_OBJECT).action("Take").nearest().first()
+        val toolsObj = findObject(C.TOOL_OBJECT)
         if (!toolsObj.valid()) {
             log("KIT", "No tools object found")
             return false
         }
 
         log("KIT", "Taking tools")
-        toolsObj.interact("Take")
+        interactObject(C.TOOL_OBJECT, "Take") // assume this returns immediately; safeWait below checks result
 
-        // Wait for dialogue and handle it
-        Condition.sleep(Random.nextInt(600, 900))
+        // Wait for any dialogue that might appear (bounded)
+        Condition.sleep(Random.nextInt(400, 700))
         if (Chat.chatting() || Chat.canContinue()) {
-            DialogueHandler.handleDialogue()
+            Chat.continueChat("Yes")
         }
 
-        // Wait for tools to appear
-        val gotTools = safeWait({ hasAllTools() }, 300, 15)
+        // Wait for the tools to appear in inventory (bounded)
+        val gotTools = safeWait({ hasAllTools() }, 300, 30) // ~9s
 
         if (gotTools) {
-            // Equip leather items and drop duplicates
             Condition.sleep(Random.nextInt(300, 500))
             equipLeatherBoots()
             equipLeatherGloves()
             dropDuplicateTools()
+        } else {
+            log("KIT", "Failed to obtain tools after interaction")
         }
 
         return hasAllTools()
     }
 
-    // =========================================================================
-    // Actions - Museum Activities
-    // =========================================================================
 
-    /**
-     * Use antique lamp on the selected skill
-     */
+
+    // Use antique lamp on the selected skill
     fun useAntiqueLamp(lampSkill: LampSkill): Boolean {
-        val lamp = Inventory.stream().name(C.ANTIQUE_LAMP).first()
+        val lamp = findObject(C.ANTIQUE_LAMP); findObject(C.LAMP)
         if (!lamp.valid()) return false
 
         log("LAMP", "Using Antique lamp on ${lampSkill.displayName}")
@@ -552,10 +482,8 @@ object MuseumUtils {
         return false
     }
 
-    /**
-     * Clean uncleaned finds at the specimen table.
-     * Clicks once and waits until cleaning is complete.
-     */
+    // Clean uncleaned finds at the specimen table.
+    // Clicks once and waits until cleaning is complete.
     fun cleanSpecimen(): Boolean {
         if (!hasUncleanedFinds()) return false
 
@@ -567,17 +495,17 @@ object MuseumUtils {
 
         log("CLEAN", "Cleaning finds at specimen table")
         if (table.click() || table.interact("Add")) {
-            Condition.wait({ Players.local().animation() == -1 && !(hasUncleanedFinds()) }, 1800, 28)
+            Condition.wait({ Players.local().animation() == -1 && !hasUncleanedFinds()}, 1800, 28)
         }
         return true
     }
 
-    /**
-     * Store common artefacts in the storage crate.
-     * Clicks once and waits until all artefacts are deposited.
-     */
+
+    // Store common artefacts in the storage crate.
+    // Clicks once and waits until all artefacts are deposited.
     fun storeFinds(): Boolean {
         if (!hasCommonArtefacts()) return false
+        if (!isInsideCleaningArea()) return travelToMuseum()
 
         val crate = findObject(C.STORAGE_CRATE)
         if (!crate.valid()) {
@@ -587,16 +515,14 @@ object MuseumUtils {
         log("STORE", "Storing finds in crate")
 
         if (crate.click() || crate.interact("Add")) {
-            Condition.wait({ Players.local().animation() == -1 && !(hasCommonArtefacts()) }, 1800, 28)
+            Condition.wait({ Players.local().animation() == -1 && (!hasCommonArtefacts()) }, 1800, 28)
             Condition.sleep(Random.nextInt(1200, 1800))
         }
         return true
     }
 
-    /**
-     * Collect uncleaned finds from specimen rocks (standard mode).
-     * Clicks once and waits for inventory to fill.
-     */
+    // Collect uncleaned finds from specimen rocks (standard mode).
+    // Clicks once and waits for inventory to fill.
     fun collectUncleanedFinds(): Boolean {
         val rocks = findObject(C.SPECIMEN_ROCK)
         if (!rocks.valid()) {
@@ -604,36 +530,47 @@ object MuseumUtils {
             return false
         }
 
-        if (!fullInv() && !setContainsLower(allJunkLc) && !setContainsLower(commonArtefactsLc)) {
-            log("COLLECT", "Collecting uncleaned finds")
-            if (rocks.click() || rocks.interact("Add")) {
-                return safeWait({
-                    fullInv() || !isScriptRunning()
-                }, 300, 100)
-            }
+        log("COLLECT", "Collecting uncleaned finds")
+        if (rocks.click() || rocks.interact("Use")) {
+            return safeWait({
+                fullInv() || !isScriptRunning()
+            }, 300, 100)
         }
-        return true
+
+        return false
     }
 
-    /**
-     * Collect uncleaned finds using 1-tick clicking (spam click mode).
-     * Clicks every 300-600ms until inventory is full.
-     */
     fun collectUncleanedFinds1T(): Boolean {
-        if (Inventory.isFull()) return true
-
-        val rocks = findObject(C.SPECIMEN_ROCK)
-        if (!rocks.valid()) {
-            log("COLLECT 1T", "No specimen rocks found")
+        if (fullInv()) {
+            log("COLLECT 1T", "Inventory full")
             return false
         }
 
         log("COLLECT 1T", "1T clicking specimen rocks")
 
-        if (!fullInv() && !setContainsLower(allJunkLc) && !setContainsLower(commonArtefactsLc)) {
-            rocks.click() || rocks.interact("Take")
-            Condition.sleep(Random.nextInt(400, 700))
+        var attempts = 0
+        val maxAttempts = 200
+
+        while (!fullInv() && freeSlots() != 0 && isScriptRunning() && attempts < maxAttempts) {
+            val rock = findObject(C.SPECIMEN_ROCK)
+            if (!rock.valid()) {
+                log("COLLECT 1T", "No specimen rocks found (iteration $attempts)")
+                return false
+            }
+
+            val clicked = try {
+                rock.click() || rock.interact("Take")
+            } catch (t: Throwable) {
+                false
+            }
+
+            Condition.sleep(Random.nextInt(200, 400))
+
+            if (clicked) {
+                Condition.sleep(Random.nextInt(150, 300))
+            }
+            attempts++
         }
-        return true
+        return !fullInv() && freeSlots() != 0
     }
 }

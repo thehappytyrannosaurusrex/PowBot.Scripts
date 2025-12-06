@@ -12,6 +12,7 @@ object MuseumConstants {
 
     const val UNCLEANED_FIND = "Uncleaned find"
     const val ANTIQUE_LAMP = "Antique lamp"
+    const val LAMP = "Lamp"
     const val TROWEL = "Trowel"
     const val ROCK_PICK = "Rock pick"
     const val SPECIMEN_BRUSH = "Specimen brush"

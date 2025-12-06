@@ -5,6 +5,7 @@ import org.powbot.api.rt4.Bank
 import org.powbot.api.script.AbstractScript
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.ScriptManifest
+import org.powbot.mobile.script.ScriptManager
 import org.thehappytyrannosaurusrex.api.inventory.RunePouch
 import org.thehappytyrannosaurusrex.api.utils.Logger
 
@@ -21,9 +22,9 @@ class ApiTestScript : AbstractScript() {
         private const val SCRIPT_NAME = "ApiTest"
 
         // Basic reanimation-style runes (just for testing)
-        private const val BODY_RUNE  = 559
+        private const val BODY_RUNE = 559
         private const val NATURE_RUNE = 561
-        private const val SOUL_RUNE   = 566
+        private const val SOUL_RUNE = 566
     }
 
     private enum class Stage {
@@ -46,11 +47,11 @@ class ApiTestScript : AbstractScript() {
 
     override fun poll() {
         when (stage) {
-            Stage.STARTUP   -> handleStartup()
+            Stage.STARTUP -> handleStartup()
             Stage.OPEN_BANK -> handleOpenBank()
             Stage.TEST_EMPTY -> handleTestEmpty()
             Stage.TEST_FILL -> handleTestFill()
-            Stage.DONE      -> handleDone()
+            Stage.DONE -> handleDone()
         }
     }
 
@@ -153,6 +154,6 @@ class ApiTestScript : AbstractScript() {
 
     private fun handleDone() {
         Logger.info(SCRIPT_NAME, "DONE", "All tests complete, stopping script")
-        controller.stop()
+        ScriptManager.stop()
     }
 }

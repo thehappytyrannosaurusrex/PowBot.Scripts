@@ -25,6 +25,40 @@ object InteractionUtils {
         return doInteractObject(obj, action, ensureViewport)
     }
 
+    fun clickThenAction(objectName: String, action: String, ensureViewport: Boolean = true): Boolean {
+        val obj = findObject(objectName)
+        if (!obj.valid()) return false
+
+        if (ensureViewport && !obj.inViewport()) {
+            Camera.turnTo(obj)
+            Condition.sleep(300)
+        }
+
+        // Try click first
+        val clickResult = obj.click()
+        if (clickResult) return true
+
+        // If click fails, try "Use" action
+        return obj.interact(action)
+    }
+
+    fun clickThenActionAt(objectName: String, tile: Tile, action: String, ensureViewport: Boolean = true): Boolean {
+        val obj = findObjectAt(objectName, tile)
+        if (!obj.valid()) return false
+
+        if (ensureViewport && !obj.inViewport()) {
+            Camera.turnTo(obj)
+            Condition.sleep(300)
+        }
+
+        // Try click first
+        val clickResult = obj.click()
+        if (clickResult) return true
+
+        // If click fails, try "Use" action
+        return obj.interact(action)
+    }
+
     fun interactObjectAt(name: String, tile: Tile, action: String? = null, ensureViewport: Boolean = true): Boolean {
         val obj = findObjectAt(name, tile)
         return doInteractObject(obj, action, ensureViewport)

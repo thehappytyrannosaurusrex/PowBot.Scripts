@@ -20,7 +20,18 @@ object DialogueHandler {
         var attempts = 0
         while ((Chat.chatting() || Chat.canContinue()) && attempts < maxAttempts) {
             if (Chat.canContinue()) {
-                Chat.clickContinue()
+                Chat.completeChat()
+            }
+            Condition.sleep(delayMs)
+            attempts++
+        }
+    }
+
+    fun dialogueInput(chatOption: String, maxAttempts: Int = 10, delayMs: Int = 600) {
+        var attempts = 0
+        while ((Chat.chatting() || Chat.canContinue()) && attempts < maxAttempts) {
+            if (Chat.canContinue()) {
+                Chat.completeChat(chatOption)
             }
             Condition.sleep(delayMs)
             attempts++

@@ -7,7 +7,10 @@ import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.AbstractScript
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.ScriptManifest
+import org.powbot.mobile.script.ScriptManager
 import org.thehappytyrannosaurusrex.api.utils.Logger
+import org.thehappytyrannosaurusrex.api.utils.InteractionUtils
+import org.thehappytyrannosaurusrex.api.utils.InventoryUtils
 import org.thehappytyrannosaurusrex.crabtrapping.data.*
 import org.thehappytyrannosaurusrex.crabtrapping.utils.CrabUtils
 
@@ -65,6 +68,9 @@ class CrabTrapping : AbstractScript() {
     // Normalisation and rebait state
     private val normalizeClickTimes = mutableMapOf<TrapSpot, Long>()
     private val rebaitState = CrabUtils.RebaitState()
+
+    // Pestle and mortar grinding state
+    private var hasGroundOnce = false
 
     private fun log(tag: String, message: String) = Logger.info(SCRIPT_NAME, tag, message)
 
@@ -145,7 +151,7 @@ class CrabTrapping : AbstractScript() {
 
         val result = CrabUtils.normalizeTrap(spot, standing, normalizeClickTimes)
         if (result.shouldStop) {
-            controller.stop()
+            ScriptManager.stop()
             return
         }
         if (result.done) {
@@ -195,6 +201,32 @@ class CrabTrapping : AbstractScript() {
     private fun handleWaitForCatch() {
         if (!CrabUtils.isAtTile(startTile)) {
             CrabUtils.walkToTile(startTile)
+            return
+        }
+
+        // Grind red crab with pestle and mortar ONCE while waiting
+        if (!hasGroundOnce && InventoryUtils.invContains("Red crab") && InventoryUtils.invContains("Pestle and mortar")) {
+            log("GRIND", "Grinding Red crab with Pestle and mortar")
+            if (InteractionUtils.useItemOnItem("Pestle and mortar", "Red crab")) {
+                hasGroundOnce = true
+            }
+        }
+
+        // Check if inventory is full and we still have red crabs to grind
+        if (InventoryUtils.fullInv() && InventoryUtils.invContains("Red crab")) {
+            log("GRIND", "Inventory full, grinding remaining Red crabs")
+            if (InteractionUtils.useItemOnItem("Pestle and mortar", "Red crab")) {
+                // Continue grinding until no more red crabs
+                return
+            }
+        }
+
+        // If inventory is full and no more red crabs, start rebaiting
+        if (InventoryUtils.fullInv() && !InventoryUtils.invContains("Red crab")) {
+            log("LOOP", "Inventory full and no more Red crabs - starting rebait sequence")
+            rebaitState.reset()
+            rebaitState.startFor(trap5)
+            phase = Phase.REBAIT_TRAP5
             return
         }
 
